@@ -1,0 +1,78 @@
+# .NET build and publish output
+**/[Bb]in/
+**/[Oo]bj/
+artifacts/
+**/publish/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.sln.ide
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# VS Code local history
+.history/
+
+# NuGet packages (older package restore layouts)
+**/packages/
+*.nupkg
+*.snupkg
+
+# Test results and coverage
+TestResults/
+**/TestResults/
+coverage/
+coverage-results/
+*.coverage
+*.coveragexml
+coverage*.xml
+coverage*.json
+lcov.info
+
+# BenchmarkDotNet output
+BenchmarkDotNet.Artifacts/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# Local environment variables and secrets
+.env
+.env.*
+!.env.example
+!.env.template
+appsettings.Local.json
+appsettings.*.Local.json
+secrets.json
+
+# Local publish settings (may contain credentials)
+*.pubxml
+*.pubxml.user
+*.publishsettings
+
+# Local HTTPS certificates and private keys
+*.pfx
+*.p12
+*.key
+
+# Operating system files
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+
+# Local SQLite databases
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
