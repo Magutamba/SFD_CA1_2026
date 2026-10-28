@@ -1,0 +1,37 @@
+@page "/userpanel"
+
+<PageTitle>User Panel</PageTitle>
+<h1>UserPanel</h1>
+<h3>Login - Existing User</h3>
+
+<label for="username">Username:</label>
+<input type="text" @bind="_loginUsername" name="username"/><br/>
+<label for="password">Password:</label>
+<input type="text" id="password" name="password"/><br/>
+<button type="submit" @onclick="LoginUser">Submit</button>
+
+<h3>Register - New User</h3>
+
+<label for="username">Username:</label>
+<input type="text" id="username" name="username"/><br/>
+<label for="password">Password:</label>
+<input type="text" id="password" name="password"/><br/>
+<button type="submit" @onclick="RegisterUser">Submit</button>
+
+<p>@_output</p>
+
+@code {
+    private string _output = string.Empty;
+    private string _loginUsername = string.Empty;
+
+    private void LoginUser()
+    {
+        _output = $"Logging in {_loginUsername}...";
+    }
+
+    private void RegisterUser()
+    {
+        _output = "Registering...";
+    }
+
+}
