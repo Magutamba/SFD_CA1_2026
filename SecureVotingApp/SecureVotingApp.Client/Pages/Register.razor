@@ -64,7 +64,7 @@
             Salt = _salt,
             DegreeOfParallelism = 1,
             MemorySize = 19456,
-            Iterations = 3
+            Iterations = 1
         };
 
         _hash = await argon2.GetBytesAsync(32);
