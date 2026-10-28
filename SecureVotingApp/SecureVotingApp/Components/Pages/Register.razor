@@ -1,0 +1,39 @@
+@page "/register"
+@rendermode InteractiveServer
+@using SecureVotingApp.Components.Contracts
+
+<h3>Create Account</h3>
+
+<EditForm Model="_request" OnValidSubmit="RegisterAsync">
+    <label>Email</label>
+    <InputText @bind-Value="_request.Email"/>
+    
+    <label>Password</label>
+    <InputText type="password" @bind-Value="_request.Password"/>
+    <button type="submit" disabled="@_isSubmitting">Create Account</button>
+    <DataAnnotationsValidator/>
+    <ValidationSummary/>
+</EditForm>
+
+@if (_message is not null)
+{
+    <p role="status">@_message</p>
+}
+
+@code {
+    private RegisterRequest _request = new();
+    private string? _message;
+    private bool _isSubmitting; // if this value is true - the submit button is disabled
+
+    public async Task RegisterAsync()
+    {
+        _isSubmitting = true;
+        _message = null;
+
+        // API Request - will simulate valid Ok response
+        // await API.Request(request,salt,argon2id config)
+        _message = "Account created successfully";
+
+        _isSubmitting = false;
+    }
+}
