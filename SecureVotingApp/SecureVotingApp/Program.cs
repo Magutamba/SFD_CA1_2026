@@ -2,7 +2,7 @@ using SecureVotingApp.Components;
 using SecureVotingApp.Services;
 //registering Dependency Injection
 var builder = WebApplication.CreateBuilder(args);
-//back end (DI) registery
+//back end (DI) registery (Jeán)
 builder.Services.AddScoped<BcryptService>();
 
 // Add services to the container.

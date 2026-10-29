@@ -1,4 +1,8 @@
-﻿using Microsoft.AspNetCore.Authentication;
+﻿// File: BcrytService.cs
+// @uthor: Jeán Walton
+// Date: 28/10/2026
+
+using Microsoft.AspNetCore.Authentication;
 using SecureVotingApp.Services;
 
 namespace secureVotingApp.Tests;

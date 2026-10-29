@@ -1,3 +1,7 @@
+// File: BcrytService.cs
+// @uthor: Jeán Walton
+// Date: 28/10/2026
+
 namespace SecureVotingApp.Services;
 
 //On initial sign up, Hashing credentials from front end using Bcrypt (even though the backend is receiving a Argon2)
