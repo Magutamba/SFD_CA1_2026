@@ -2,15 +2,44 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureVotingApp", "SecureVotingApp\SecureVotingApp.csproj", "{4CCE4C20-BD11-4DA8-864A-2F7B3B4382EC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureVotingApp.Client", "SecureVotingApp.Client\SecureVotingApp.Client.csproj", "{D2AE61C7-459E-4474-998D-31A0563F2577}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
 		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{4CCE4C20-BD11-4DA8-864A-2F7B3B4382EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4CCE4C20-BD11-4DA8-864A-2F7B3B4382EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4CCE4C20-BD11-4DA8-864A-2F7B3B4382EC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4CCE4C20-BD11-4DA8-864A-2F7B3B4382EC}.Debug|x64.Build.0 = Debug|Any CPU
+		{4CCE4C20-BD11-4DA8-864A-2F7B3B4382EC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4CCE4C20-BD11-4DA8-864A-2F7B3B4382EC}.Debug|x86.Build.0 = Debug|Any CPU
 		{4CCE4C20-BD11-4DA8-864A-2F7B3B4382EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4CCE4C20-BD11-4DA8-864A-2F7B3B4382EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4CCE4C20-BD11-4DA8-864A-2F7B3B4382EC}.Release|x64.ActiveCfg = Release|Any CPU
+		{4CCE4C20-BD11-4DA8-864A-2F7B3B4382EC}.Release|x64.Build.0 = Release|Any CPU
+		{4CCE4C20-BD11-4DA8-864A-2F7B3B4382EC}.Release|x86.ActiveCfg = Release|Any CPU
+		{4CCE4C20-BD11-4DA8-864A-2F7B3B4382EC}.Release|x86.Build.0 = Release|Any CPU
+		{D2AE61C7-459E-4474-998D-31A0563F2577}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D2AE61C7-459E-4474-998D-31A0563F2577}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D2AE61C7-459E-4474-998D-31A0563F2577}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D2AE61C7-459E-4474-998D-31A0563F2577}.Debug|x64.Build.0 = Debug|Any CPU
+		{D2AE61C7-459E-4474-998D-31A0563F2577}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D2AE61C7-459E-4474-998D-31A0563F2577}.Debug|x86.Build.0 = Debug|Any CPU
+		{D2AE61C7-459E-4474-998D-31A0563F2577}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D2AE61C7-459E-4474-998D-31A0563F2577}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D2AE61C7-459E-4474-998D-31A0563F2577}.Release|x64.ActiveCfg = Release|Any CPU
+		{D2AE61C7-459E-4474-998D-31A0563F2577}.Release|x64.Build.0 = Release|Any CPU
+		{D2AE61C7-459E-4474-998D-31A0563F2577}.Release|x86.ActiveCfg = Release|Any CPU
+		{D2AE61C7-459E-4474-998D-31A0563F2577}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 EndGlobal
