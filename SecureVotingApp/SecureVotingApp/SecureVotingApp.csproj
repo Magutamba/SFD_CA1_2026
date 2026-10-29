@@ -10,6 +10,11 @@
     <ItemGroup>
       <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.14" />
+      <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.14" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\SecureVotingApp.Client\SecureVotingApp.Client.csproj" />
     </ItemGroup>
 
 </Project>

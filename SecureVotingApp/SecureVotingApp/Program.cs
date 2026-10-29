@@ -7,7 +7,11 @@ builder.Services.AddScoped<BcryptService>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents()
+    .AddInteractiveWebAssemblyComponents();
+
+// Add API Controllers - None currently exist but will be needed for future
+builder.Services.AddControllers();
 
 var app = builder.Build();
 
@@ -19,6 +23,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+app.MapControllers();
+
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 
@@ -26,6 +32,9 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
-
+    .AddInteractiveServerRenderMode()
+    .AddInteractiveWebAssemblyRenderMode()
+    .AddAdditionalAssemblies(
+        typeof(SecureVotingApp.Client._Imports).Assembly
+    );
 app.Run();

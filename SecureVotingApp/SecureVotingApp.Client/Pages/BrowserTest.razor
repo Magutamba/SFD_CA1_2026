@@ -1,0 +1,25 @@
+@page "/browser-test"
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+@rendermode @(new InteractiveWebAssemblyRenderMode(
+                prerender: false))
+
+<h3>WebAssembly Test</h3>
+
+<p>Renderer: @RendererInfo.Name</p>
+<p>Interactive: @RendererInfo.IsInteractive</p>
+<p>Operating in browser: @OperatingSystem.IsBrowser()</p>
+
+<p>Button clicked: @count times</p>
+
+<button @onclick="Increment">
+    Test
+</button>
+
+@code {
+    private int count;
+
+    private void Increment()
+    {
+        count++;
+    }
+}
