@@ -1,9 +1,21 @@
 using SecureVotingApp.Components;
+using SecureVotingApp.Data;
 using SecureVotingApp.Services;
+using Microsoft.EntityFrameworkCore;
+
 //registering Dependency Injection
 var builder = WebApplication.CreateBuilder(args);
 //back end (DI) registery (Jeán)
-builder.Services.AddScoped<BcryptService>();
+builder.Services.AddScoped<BcryptService>(); //hashing the argon2 
+//configure which Database (EFC) will use all configurations and passed to the super class of the AppDbContext class
+builder.Services.AddDbContext<AppDbContext>(options =>
+{   
+    //connect configuration to EF Core access/edit the sql database (EFC)
+    options.UseSqlite(builder.Configuration.GetConnectionString("SQLite_Connection"));
+});
+
+
+
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -23,7 +35,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.MapControllers();
+app.MapControllers();//Controllers
 
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
