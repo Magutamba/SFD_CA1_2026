@@ -1,0 +1,33 @@
+@page "/authentication"
+@rendermode @(new InteractiveWebAssemblyRenderMode(
+                prerender: true))
+<h3>Account</h3>
+@if (_authenticated)
+{
+    <section>
+        <p>Username...</p>
+        <p>Password...</p>
+    </section>
+}else {
+<section>
+    <NavLink class="nav-link" href="login">
+        <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Login Link
+    </NavLink>
+
+    <NavLink class="nav-link" href="register">
+        <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Register Link
+    </NavLink>
+</section>
+}
+
+<button @onclick="Authenticate">Authenticate</button>
+
+
+@code {
+    private bool _authenticated = false;
+
+    public void Authenticate()
+    {
+        _authenticated = true;
+    }
+}

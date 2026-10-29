@@ -1,27 +1,20 @@
-@page "/register"
-@using Microsoft.AspNetCore.Components.Web
+@page "/login"
 @rendermode @(new InteractiveWebAssemblyRenderMode(
-                prerender: false))
+                prerender: true))
 @using System.Security.Cryptography
 @using System.Text
 @using TopSecret.Cryptography
 @using SecureVotingApp.Components.Contracts
 
-<h3>Create Account</h3>
+<h3>Login Account</h3>
 
-<p>Button: @count times</p>
-<button @onclick="upCount">test me</button>
-
-<p>Renderer: @RendererInfo.Name</p>
-<p>Interactive: @RendererInfo.IsInteractive</p>
-
-<EditForm Model="_request" FormName="AccountRegistration" OnValidSubmit="RegisterAsync">
+<EditForm Model="_request" FormName="AccountLogin" OnValidSubmit="LoginAsync">
     <label>Email</label>
     <InputText @bind-Value="_request.Email"/>
     
     <label>Password</label>
     <InputText type="password" @bind-Value="_request.Password"/>
-    <button type="submit" disabled="@_isSubmitting">Create Account</button>
+    <button type="submit" disabled="@_isSubmitting">Login</button>
     
     <DataAnnotationsValidator/>
     <ValidationSummary/>
@@ -40,21 +33,17 @@
     private string? _message;
     private bool _isSubmitting; // if this value is true - the submit button is disabled
     private string _hashedPw = string.Empty;
-    private byte[] _hash = [];
     private byte[] _salt = [];
-    public int count = 0;
-    public void upCount()
-    {
-        count++;
-    }
     
-    public async Task RegisterAsync()
+    public async Task LoginAsync()
     {
         _isSubmitting = true;
         _message = null;
         
-        // Generating the hashed password
+        // API call using email to get account salt
+        // Simulated salt
         _salt = RandomNumberGenerator.GetBytes(16);
+        
         var passwordBytes = Encoding.UTF8.GetBytes(_request.Password);
         
         // Argon2 Settings with randomly generated Salt
@@ -67,13 +56,13 @@
             Iterations = 1
         };
 
-        _hash = await argon2.GetBytesAsync(32);
+        var hash = await argon2.GetBytesAsync(32);
 
-        _hashedPw = Convert.ToBase64String(_hash);
+        _hashedPw = Convert.ToBase64String(hash);
         // API Request
         // await API.Request(request.Email, _hashedPw, salt)
         // Simulating valid request
-        _message = "Account created successfully";
+        _message = "Account Logged in...";
 
         _isSubmitting = false;
     }
