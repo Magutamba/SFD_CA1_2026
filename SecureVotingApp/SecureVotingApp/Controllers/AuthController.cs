@@ -13,8 +13,16 @@ using SecureVotingApp.DTOs;
 using SecureVotingApp.Models;
 using SecureVotingApp.Services;
 using SQLitePCL;//controller base
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 
-
+/*
+    Claim — Represents one piece of information about a user.
+    ClaimsIdentity — Groups claims into an identity.
+    ClaimsPrincipal — Represents the user associated with that identity.
+*/
 namespace SecureVotingApp.Controllers;
 
 [ApiController]//this controller handles API requests
@@ -155,6 +163,23 @@ public class AuthController : ControllerBase
         bool isValidPassword = _bcryptService.VerifyCredential(request.Argon2Hash, user.CredentialHash);
         if(!isValidPassword) return Unauthorized("Invalid Password");
 
+
+        //collection of claims
+        var claimId = new Claim(ClaimTypes.NameIdentifier, user.Id.ToString());
+        var claimEmail = new Claim(ClaimTypes.Email, user.Email);
+        var claimColletion = new[] {claimId, claimEmail};
+        //ClaimIdentity                                                                 
+        var claimIdentity = new ClaimsIdentity(claimColletion, CookieAuthenticationDefaults.AuthenticationScheme);//"cookies"
+        //Claim Principle
+        var claimPrincipal = new ClaimsPrincipal(claimIdentity);
+
+        //ClaimPrinciple call /creating the cookie
+        await HttpContext.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            claimPrincipal
+        );
+
+
         return Ok();
     }
 
@@ -184,4 +209,18 @@ public class AuthController : ControllerBase
         }
         return Ok(new {salt = user.Argon2Salt});//returns a json
     }
+
+    //logout
+    [HttpPost("logout")]
+    [Authorize]
+    
+    public async Task<IActionResult> Logout()
+    {   
+        //cancelling the cookie
+        await HttpContext.SignOutAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme
+        );
+        return Ok();
+    }
+ 
 }    
