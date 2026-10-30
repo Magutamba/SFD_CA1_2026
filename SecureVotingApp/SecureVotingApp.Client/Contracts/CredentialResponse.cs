@@ -9,4 +9,7 @@ public class CredentialResponse
 {
     //signed credential issued by server after checking voter is logged in and hasn't voted
     public string SignedCredential {get;set;} =string.Empty;
-}
+
+    //candidates for the election
+    public List<string> Candidates {get;set;} = new List<string>()
+}   
