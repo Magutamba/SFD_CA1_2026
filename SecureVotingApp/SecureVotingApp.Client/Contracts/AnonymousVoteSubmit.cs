@@ -21,5 +21,7 @@ public class AnonymousVoteSubmit
     //is eligible to vote
     public string isEligible {get;set;} = string.Empty;
 
+    
+
 
 }
