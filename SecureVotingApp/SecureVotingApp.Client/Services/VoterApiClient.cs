@@ -19,7 +19,7 @@ public class VoterApiClient
     private readonly IBlindCredentialClient blindVoterClient;
 
     //constructor for VoterApiClient class, accepts dependencies via ASP.NET Core dpendency injection
-    public VoterApiClient(HttpClient httpClient)
+    public VoterApiClient(HttpClient httpClient, IBlindCredentialClient blindVoterClient)
     {
         //assign the injected HTTP client instance to the private field for use in API calls
         this.httpClient = httpClient;
