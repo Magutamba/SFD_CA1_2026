@@ -205,9 +205,9 @@ public class AuthController : ControllerBase
             //generate a random number
             byte[] randomBytes = RandomNumberGenerator.GetBytes(16);
             string fakeArgon2Salt = Convert.ToBase64String(randomBytes);
-            return Ok(new {salt = fakeArgon2Salt});//same signature return  
+            return Ok(new {details = fakeArgon2Salt});//same signature return  
         }
-        return Ok(new {salt = user.Argon2Salt});//returns a json
+        return Ok(new {details = user.Argon2Salt});//returns a json
     }
 
     //logout
