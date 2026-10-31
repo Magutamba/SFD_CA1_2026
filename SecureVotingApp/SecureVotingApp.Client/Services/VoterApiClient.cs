@@ -94,7 +94,7 @@ public class VoterApiClient
 
         //login cookie not needed for submission of vote
         request.SetBrowserRequestCredentials(
-            BrowserRequstCredentials.Omit
+            BrowserRequestCredentials.Omit
         );
 
         //wrap signed credential, electionId, Candidate choice, vote choice, as voted token/expiry in AnonymousVoteSubmit object and serialize to JSON request body
