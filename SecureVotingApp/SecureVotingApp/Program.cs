@@ -45,6 +45,11 @@ builder.Services.AddSingleton<CredentialSigner>(_ => new CredentialSigner(privat
 builder.Services.AddScoped<CredentialStateStore>();
 //@author Moïse 
 builder.Services.AddScoped<CredentialService>();
+// Temporarily store pending registrations until TOTP setup is confirmed.(Jeán Walton)
+builder.Services.AddMemoryCache();
+
+// Manage temporary registrations until TOTP enrollment is verified.(Jeán Walton)
+builder.Services.AddSingleton<PendingRegistrationService>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -52,7 +57,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents() // Allows blazor client to render page and keep sensitive information away from server or transmission over network
     .AddAuthenticationStateSerialization(); // Shared authentication state with client
 
-// Add API Controllers - None currently exist but will be needed for future
+// Add API Controllers - (Jeán Walton)
 builder.Services.AddControllers();
 
 var app = builder.Build();
