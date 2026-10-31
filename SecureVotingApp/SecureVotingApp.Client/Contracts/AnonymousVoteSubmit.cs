@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 //logical namespace to group components contracts together prevents class name collisions
 namespace SecureVotingApp.Components.Contracts;
 
-//sent when logged in user request ballot to cast their vote
+//sent when logged in as credentials annd is eligible casts their vote 
 public class AnonymousVoteSubmit
 {
     
@@ -15,13 +15,17 @@ public class AnonymousVoteSubmit
     [Required] 
     //anonymous signed credential issued after
     // authorises the voter to cast their vote without exposing their identity 
-    public string AnonymousCredential {get;set;} = string.Empty;
+    public string SignedCredential {get;set;} = string.Empty;
 
     [Required]
     //is eligible to vote
     public string isEligible {get;set;} = string.Empty;
 
-    
+    //the vote cast by the voter
+    [Required]
+    public string Vote {get;set;} = string.Empty;
+
+
 
 
 }
