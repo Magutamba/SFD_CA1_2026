@@ -93,7 +93,7 @@ public class VoterApiClient
             "api/votes");
 
         //login cookie not needed for submission of vote
-        Request.SetBrowserRequestCredentials(
+        request.SetBrowserRequestCredentials(
             BrowserRequstCredentials.Omit
         );
 
