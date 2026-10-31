@@ -349,4 +349,15 @@ public class AuthControllerIntegrationTests : IDisposable
         //Assert
         Assert.Equal(16, saltBytes.Length);
     }
+
+    [Fact]
+    public async Task Logout_withoutAuthentication_ReturnsUnauthorised()
+    {
+        //Act requesting logout without logging in 
+        var response = await _httpClient.PostAsync( 
+            "/api/auth/logout", null);
+        
+        //assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
 }

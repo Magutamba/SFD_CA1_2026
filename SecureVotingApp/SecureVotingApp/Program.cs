@@ -7,7 +7,8 @@ using Microsoft.AspNetCore.Http;
 
 //registering Dependency Injection
 var builder = WebApplication.CreateBuilder(args);
-//back end (DI) registery (Jeán)
+
+//back end (DI) registery (Jeán Walton)
 builder.Services.AddScoped<BcryptService>(); //hashing the argon2 
 //configure which Database (EFC) will use all configurations and passed to the super class of the AppDbContext class
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -16,7 +17,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("SQLite_Connection"));
 });
 
-//registers functionality with dependency injection.
+//registers functionality with dependency injection. (Jeán Walton)
 builder.Services                //exactly the same as .AddAuthentication("Cookies") ..just safer
     .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)//default authenication scheme
     .AddCookie(options => {//register cookie and set security 
@@ -49,10 +50,19 @@ if (!app.Environment.IsDevelopment())
 
 app.MapControllers();//Controllers
 
-// temp remove until frontend is connectd//app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+// Show Blazor error pages without overwriting API error responses.(Jeán Walton)
+app.UseWhen(
+    context => !context.Request.Path.StartsWithSegments("/api"),
+    branch =>
+    {
+        branch.UseStatusCodePagesWithReExecute(
+            "/not-found",
+            createScopeForStatusCodePages: true);
+    });
+
 app.UseHttpsRedirection();
 
-//cookies 
+//cookies (Jeán Walton)
 app.UseAuthentication();//app.Use... adds middleware to the HTTP request pipeline
 app.UseAuthorization();
 
@@ -68,7 +78,7 @@ app.MapRazorComponents<App>()
 app.Run();
 
 
-//this is for AuthControllerIntegrationTests.cs
+//this is for AuthControllerIntegrationTests.cs(Jeán Walton)
 public partial class Program
 {
     
