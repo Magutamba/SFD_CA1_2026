@@ -40,13 +40,13 @@ public class VoterApiClient
         request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
 
         //wrap the blinded credential and electionId payload in a CredentialRequest object and serialize to JSON for the request body
-        request.Content = JsonContent.Create(
-            new AnonymousVoteSubmit
+        request.Content = JsonContent.Create(new CredentialRequest
             {
                 ElectionId = electionId,
                 BlindedCredential = blindRequest.BlindedCredential
             }
         );
+
         //send the request to the server and wait for the response signed credential and ballot
         using HttpResponseMessage response = await httpClient.SendAsync(request);
 
@@ -124,4 +124,4 @@ public class VoterApiClient
 
 
     }
-
+}
