@@ -17,6 +17,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using OtpNet;
 
 /*
     Claim — Represents one piece of information about a user.
@@ -35,13 +36,18 @@ public class AuthController : ControllerBase
     //[FromRoute]	Values inside the URL path	Retrieving a user by ID
     private readonly BcryptService _bcryptService;
     private readonly AppDbContext _dbContext;
+    //for 2FA
+    private readonly TotpService _totpService;
+    private readonly PendingRegistrationService _pendingRegistrationService;
     
     private EmailAddressAttribute emailChecker = new EmailAddressAttribute();
 
-        public AuthController(BcryptService bcryptService, AppDbContext dbContext)
+    public AuthController(BcryptService bcryptService, AppDbContext dbContext, TotpService totpService, PendingRegistrationService pendingRegistrationService)
     {
         this._bcryptService = bcryptService;
         this._dbContext = dbContext;
+        this._totpService = totpService;
+        this._pendingRegistrationService = pendingRegistrationService;
     }
     
     [HttpPost("register")]
@@ -100,6 +106,36 @@ public class AuthController : ControllerBase
         //call the Bcrypt on the Argon2
         string argon2HashedByBycrpt = _bcryptService.HashCredential(request.Argon2Hash);
 
+        // Generate the secret shared with the user's authenticator app.
+        string totpSecret = _totpService.GenerateSecret();
+        
+        // Generate the setup URI that the frontend will display as a QR code.
+        string setupUri = _totpService.GenerateTOTPSetupUri(
+            normalisedEmail,
+            totpSecret
+        );
+
+        // Hold registration details temporarily until TOTP setup is verified.
+        var pendingRegistration = new PendingRegistration
+        {
+            Email = normalisedEmail,
+            CredentialHash = argon2HashedByBycrpt,
+            Argon2Salt = request.Argon2Salt,
+            TotpSecret = totpSecret
+        };
+
+        // Store the pending registration for 10 minutes.
+        string registrationId =
+            _pendingRegistrationService.CreatePendingRegistration(pendingRegistration);
+
+        // Return the information needed to display the authenticator QR code.
+        return Ok(new
+        {
+            registrationId,
+            setupUri
+        });
+
+        /*
         //creating a user object
         var newUser = new User{
             Email = normalisedEmail,
@@ -119,10 +155,77 @@ public class AuthController : ControllerBase
         {
            return Conflict("Registration could not complete");
         }
-            
-        return Ok();
+         */   
+       //return Ok();
     }
 
+    [HttpPost("confirm-registration")]
+    public async Task<IActionResult> ConfirmRegistration ([FromBody] ConfirmRegistrationDto request)
+    {   
+        // Retrieve the registration details stored temporarily in memory.
+        var pendingUser = _pendingRegistrationService.GetPendingRegistration(
+            request.RegistrationId
+        );
+
+        // Reject expired or invalid registration references.
+        if (pendingUser is null)
+        {
+            return BadRequest("Registration expired or invalid");
+        }
+
+        // Reject missing, incorrectly sized or non-numeric 2FA codes.
+        if (string.IsNullOrWhiteSpace(request.Code) ||
+            request.Code.Length != 6 ||
+            !request.Code.All(char.IsAsciiDigit))
+        {
+            return Unauthorized("Invalid credentials");
+        }
+
+        // Verify the first authenticator code before creating the account.
+        bool isValidCode = _totpService.VerifyTOTPCode(
+            pendingUser.TotpSecret,
+            request.Code
+        );
+
+        // Reject an incorrect authenticator code.
+        if (!isValidCode)
+        {   
+            _pendingRegistrationService.RecordFailedAttempt(request.RegistrationId);
+
+            return BadRequest("Invalid authentication code");
+        }
+
+        // Encrypt the verified TOTP secret before storing it in SQLite.
+        string encryptedSecret = _totpService.EncryptSecret(pendingUser.TotpSecret);
+
+        // Create a permanent account only after successful TOTP verification.
+        var newUser = new User
+        {
+            Email = pendingUser.Email,
+            CredentialHash = pendingUser.CredentialHash,
+            Argon2Salt = pendingUser.Argon2Salt,
+            TotpSecret = encryptedSecret
+        };
+
+         _dbContext.Users.Add(newUser); //EF Core to trake newUser as a new record
+        //insert into database
+        try
+        {
+            await _dbContext.SaveChangesAsync();//insert into database
+
+        }
+        catch (DbUpdateException)
+        {
+           return Conflict("Registration could not complete");
+        }
+
+        // Remove the temporary registration after the account is saved.
+        _pendingRegistrationService.RemovePendingRegistration(
+            request.RegistrationId
+        );
+
+        return Ok();
+    }
 
     [HttpPost("login")]
     public async Task<IActionResult> UserLogin([FromBody] UserLoginDto request)
@@ -162,7 +265,35 @@ public class AuthController : ControllerBase
         //to verify credentials 
         bool isValidPassword = _bcryptService.VerifyCredential(request.Argon2Hash, user.CredentialHash);
         if(!isValidPassword) return Unauthorized("Invalid Password");
+        
+        // Reject missing, incorrectly sized or non-numeric 2FA codes.
+        if (string.IsNullOrWhiteSpace(request.Code) ||
+            request.Code.Length != 6 ||
+            !request.Code.All(char.IsAsciiDigit))
+        {
+            return Unauthorized("Invalid credentials");
+        }
 
+        // Require a configured TOTP secret for every account.
+        if (string.IsNullOrWhiteSpace(user.TotpSecret))
+        {
+            return Unauthorized("Invalid credentials");
+        }
+
+       
+        // Retrieve the original TOTP secret from its encrypted value.
+        string secret = _totpService.DecryptSecret(user.TotpSecret);
+
+        // Verify the six-digit authenticator code.
+        bool isValidTotp = _totpService.VerifyTOTPCode(
+            secret,//in voting db
+            request.Code//the user input 2FA code
+        );
+
+        if (!isValidTotp)
+        {
+            return Unauthorized("Invalid credentials");
+        }
 
         //collection of claims
         var claimId = new Claim(ClaimTypes.NameIdentifier, user.Id.ToString());
