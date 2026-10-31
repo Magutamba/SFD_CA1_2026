@@ -18,4 +18,5 @@ public class CredentialResponse
     //yes no vote, will pick which later
     public List<string> YesNoChoices {get;set;} = new List<string>();
 
+    
 }   

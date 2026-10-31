@@ -24,7 +24,7 @@ public class AnonymousVoteSubmit
     //the vote cast by the voter
     [Required]
     public string VoteChoice {get;set;} = string.Empty;
-
+    
     //candididate choice
     [Required]
     public string CandidateChoice {get;set;} = string.Empty; 
