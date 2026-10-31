@@ -1,4 +1,4 @@
-//Moïse
+//@author Moïse
 //import data annotations for validation e.g Required, EmailAddress, MinLength
 using System.ComponentModel.DataAnnotations;
 //logical namespace to group components contracts together prevents class name collisions
@@ -23,7 +23,11 @@ public class AnonymousVoteSubmit
 
     //the vote cast by the voter
     [Required]
-    public string Vote {get;set;} = string.Empty;
+    public string VoteChoice {get;set;} = string.Empty;
+
+    //candididate choice
+    [Required]
+    public string CandidateChoice {get;set;} = string.Empty; 
 
 
 
