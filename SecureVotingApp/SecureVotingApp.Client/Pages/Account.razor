@@ -5,8 +5,7 @@
 @if (_authenticated)
 {
     <section>
-        <p>Username...</p>
-        <p>Password...</p>
+        <p>Welcome: @_email</p>
     </section>
 }else {
 <section>
@@ -24,6 +23,7 @@
 
 
 @code {
+    private string _email = string.Empty;
     private bool _authenticated = false;
 
     public void Authenticate()
