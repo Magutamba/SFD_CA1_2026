@@ -83,8 +83,8 @@ public class VoterApiClient
     //method for submitting vote to the server using anonymous signed credentials, electionId and asVoted
     public async Task<VoteReceipt> SubmitVoteAsync(
         VotingSession session,
-        string CandidateName,
-        string VoteChoice)
+        string candidateName,
+        string voteChoice)
     {
         //POST request target votes endpoint
         //using  var ensures memory and headers are automatically disposed once executed
