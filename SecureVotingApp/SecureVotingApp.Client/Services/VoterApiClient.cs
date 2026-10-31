@@ -17,7 +17,7 @@ public class VoterApiClient
     private readonly HttpClient httpClient;
     //private readlonly field for storing the injected client service for cryptographically blinding the voter in client
     private readonly IBlindCredentialClient blindVoterClient;
-    
+
     //constructor for VoterApiClient class, accepts dependencies via ASP.NET Core dpendency injection
     public VoterApiClient(HttpClient httpClient)
     {
@@ -55,67 +55,73 @@ public class VoterApiClient
 
         //deserialize the response content to a CredentialResponse object which contains signed credential and ballot
         CredentialResponse credentialResponse =
-            await response.Content.ReadFromJsonAsync<CredentialResponse>() 
+            await response.Content.ReadFromJsonAsync<CredentialResponse>()
             ?? throw new InvalidOperationException(
                 "The credential response is empty."
             );
 
         //remove the blinding from the signed credential
         string anonymousCredential = blindVoterClient.UnblindCredential(
-            // pass the signed ballot creddential
+            // pass the signed ballot creddential and blinding state to unblind method and get signed credential for anonimity whilst voting
             credentialResponse.SignedBlindedCredential,
             blindRequest.State
         );
+        //return a VotingSession object containin electionId, signed credential 
         return new VotingSession
         {
-            
-        }
-
-        {
             ElectionId = credentialResponse.ElectionId,
-            AnonymousCredential = anonymousCredential,
+            SignedBlindedCredential = anonymousCredential,
             Candidates = credentialResponse.Candidates,
-            ExpiresAt = credentialResponse.ExpiresAt
+            //will choose later between candidate and yes/no token or expiry
+            VoteChoice = credentialResponse.VoteChoice,
+            ExpiresAt = credentialResponse.ExpiresAt,
+            AsVotedToken = credentialResponse.AsVotedToken
         };
+
     }
 
+    //method for submitting vote to the server using anonymous signed credentials, electionId and asVoted
     public async Task<VoteReceipt> SubmitVoteAsync(
-            VotingSession session,
-            string candidateId)
+        VotingSession session,
+        string CandidateName,
+        string VoteChoice)
     {
+        //POST request target votes endpoint
+        //using  var ensures memory and headers are automatically disposed once executed
         using var request = new HttpRequestMessage(
             HttpMethod.Post,
             "api/votes");
 
-        // Do not send the login cookie with the anonymous vote.
-        request.SetBrowserRequestCredentials(
-            BrowserRequestCredentials.Omit
+        //login cookie not needed for submission of vote
+        Request.SetBrowserRequestCredentials(
+            BrowserRequstCredentials.Omit
         );
 
+        //wrap signed credential, electionId, Candidate choice, vote choice, as voted token/expiry in AnonymousVoteSubmit object and serialize to JSON request body
         request.Content = JsonContent.Create(
             new AnonymousVoteSubmit
             {
                 ElectionId = session.ElectionId,
-                AnonymousCredential =
-                    session.AnonymousCredential,
-                CandidateId = candidateId
+                SignedBlindedCredential = session.SignedBlindedCredential,
+                Candidate = CandidateName,
+                //will choose later between candidate and yes/no token or expiry
+                VoteChoice = VoteChoice,
+                ExpiresAt = session.ExpiresAt,
+                AsVotedToken = session.AsVotedToken
             }
+
         );
 
-        using HttpResponseMessage response =
-            await httpClient.SendAsync(request);
-
+        //send the request to the server and wait for the response containin vote receipt
+        using HttpResponseMessage response = await httpClient.SendAsync(request);
+        //ensure the response indicates success
         response.EnsureSuccessStatusCode();
 
-        return await response.Content.ReadFromJsonAsync<
-            VoteReceipt>()
-            ?? throw new InvalidOperationException(
-                "The vote response was empty."
+        // deserialize the response content to a VoteReceipt object which contains confirmation of vote submission
+        return await response.Content.ReadFromJsonAsync<VoteReceipt>()
+            ?? throw new InvalidOperationException("The vote response was empty."
             );
-    }
-}
-
 
 
     }
-}
+
