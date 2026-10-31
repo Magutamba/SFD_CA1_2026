@@ -1,0 +1,108 @@
+@page "/login"
+@rendermode @(new InteractiveWebAssemblyRenderMode(
+                prerender: false))
+@using System.Security.Cryptography
+@using System.Text
+@using TopSecret.Cryptography
+@using SecureVotingApp.Components.Contracts
+@inject HttpClient Http
+
+<h3>Login Account</h3>
+
+<EditForm Model="_request" FormName="AccountLogin" OnValidSubmit="LoginAsync">
+    <label>Email</label>
+    <InputText @bind-Value="_request.Email"/>
+    
+    <label>Password</label>
+    <InputText type="password" @bind-Value="_request.Password"/>
+    <button type="submit" disabled="@_isSubmitting">Login</button>
+    
+    <DataAnnotationsValidator/>
+    <ValidationSummary/>
+</EditForm>
+
+@if (_message is not null)
+{
+    <p role="status">@_message</p>
+    <p role="status">@_request.Email</p>
+    <p role="status">@_request.Password</p>
+    <p role="status">salt from server: @_saltFromServer </p>
+    <p role="status">@apiResponse</p>
+}
+
+@code {
+    private readonly LoginRequest _request = new();
+    private string? _message;
+    private bool _isSubmitting; // if this value is true - the submit button is disabled
+    private string? _saltFromServer = string.Empty;
+
+    private string? apiResponse = string.Empty;
+    
+    public async Task LoginAsync()
+    {
+        _isSubmitting = true;
+        _message = null;
+        var saltPayload = new SaltRequest()
+        {
+            Email = _request.Email
+        };
+        
+        // API call using email to get account salt
+        using var saltResponse = await Http.PostAsJsonAsync(
+            "api/auth/details",
+            saltPayload);
+        
+        if (!saltResponse.IsSuccessStatusCode)
+        {
+            _message = $"Error retrieving details: {await saltResponse.Content.ReadAsStringAsync()}";
+            _isSubmitting = false;
+            return;
+        }
+        
+        var responseBody = await saltResponse.Content.ReadAsStringAsync();
+
+        apiResponse = $"API Response: {responseBody}";
+        
+        var saltResult = await saltResponse.Content.ReadFromJsonAsync<SaltResponse>();
+        if (saltResult is null || string.IsNullOrWhiteSpace(saltResult.Salt))
+        {
+            _message = "Error retrieving account details, please contact support";
+            _isSubmitting = false;
+            return;
+        }
+        _saltFromServer = saltResult.Salt;
+        
+        byte[] salt = Convert.FromBase64String(saltResult.Salt);
+        
+        var passwordBytes = Encoding.UTF8.GetBytes(_request.Password);
+        
+        // Argon2 Settings with randomly generated Salt
+        // Salt needs to be saved and associated to it's given user for future Login attempt password hashing
+        using var argon2 = new Argon2id(passwordBytes)
+        {
+            Salt = salt,
+            DegreeOfParallelism = 1,
+            MemorySize = 19456,
+            Iterations = 1
+        };
+
+        var hash = await argon2.GetBytesAsync(32);
+
+        var argon2Hash  = Convert.ToBase64String(hash);
+        // API Request
+
+        var userPayload = new UserLogin()
+        {
+            Email = _request.Email,
+            Argon2Hash = argon2Hash
+        };
+        
+        using var response = await Http.PostAsJsonAsync(
+            "api/auth/login",
+            userPayload);
+        
+        _message = response.IsSuccessStatusCode ? "Login Successful" : response.ReasonPhrase;
+
+        _isSubmitting = false;
+    }
+}

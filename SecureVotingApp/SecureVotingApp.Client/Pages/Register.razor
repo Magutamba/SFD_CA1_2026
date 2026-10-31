@@ -1,20 +1,25 @@
-@page "/login"
+@page "/register"
 @rendermode @(new InteractiveWebAssemblyRenderMode(
-                prerender: true))
+                prerender: false))
 @using System.Security.Cryptography
 @using System.Text
 @using TopSecret.Cryptography
 @using SecureVotingApp.Components.Contracts
+@inject HttpClient Http
+<h3>Create Account</h3>
 
-<h3>Login Account</h3>
+<p>Renderer: @RendererInfo.Name</p>
+<p>Interactive: @RendererInfo.IsInteractive</p>
 
-<EditForm Model="_request" FormName="AccountLogin" OnValidSubmit="LoginAsync">
+<EditForm Model="_request" FormName="AccountRegistration" OnValidSubmit="RegisterAsync">
     <label>Email</label>
     <InputText @bind-Value="_request.Email"/>
     
     <label>Password</label>
     <InputText type="password" @bind-Value="_request.Password"/>
-    <button type="submit" disabled="@_isSubmitting">Login</button>
+    <label>Confirm Password</label>
+    <InputText type="password" @bind-Value="_request.ConfirmPassword"/>
+    <button type="submit" disabled="@_isSubmitting">Create Account</button>
     
     <DataAnnotationsValidator/>
     <ValidationSummary/>
@@ -23,34 +28,27 @@
 @if (_message is not null)
 {
     <p role="status">@_message</p>
-    <p>Original Password: @_request.Password</p>
-    <p>Hashed Password: @_hashedPw</p>
-    <p>Salt Used: @Convert.ToBase64String(_salt)</p>
 }
 
 @code {
     private readonly RegisterRequest _request = new();
     private string? _message;
     private bool _isSubmitting; // if this value is true - the submit button is disabled
-    private string _hashedPw = string.Empty;
-    private byte[] _salt = [];
     
-    public async Task LoginAsync()
+    public async Task RegisterAsync()
     {
         _isSubmitting = true;
         _message = null;
         
-        // API call using email to get account salt
-        // Simulated salt
-        _salt = RandomNumberGenerator.GetBytes(16);
-        
+        // Generating the hashed password
+        var salt = RandomNumberGenerator.GetBytes(16);
         var passwordBytes = Encoding.UTF8.GetBytes(_request.Password);
         
         // Argon2 Settings with randomly generated Salt
         // Salt needs to be saved and associated to it's given user for future Login attempt password hashing
         using var argon2 = new Argon2id(passwordBytes)
         {
-            Salt = _salt,
+            Salt = salt,
             DegreeOfParallelism = 1,
             MemorySize = 19456,
             Iterations = 1
@@ -58,12 +56,24 @@
 
         var hash = await argon2.GetBytesAsync(32);
 
-        _hashedPw = Convert.ToBase64String(hash);
-        // API Request
-        // await API.Request(request.Email, _hashedPw, salt)
-        // Simulating valid request
-        _message = "Account Logged in...";
+        var argon2Hash = Convert.ToBase64String(hash);
 
+        var payload = new UserRegistration()
+        {
+            Email = _request.Email,
+            Argon2Hash = argon2Hash,
+            Argon2Salt = Convert.ToBase64String(salt)
+        };
+        
+        
+        // API Request
+        using var response = await Http.PostAsJsonAsync(
+            "api/auth/register",
+            payload);
+
+        _message = response.IsSuccessStatusCode ? "Account created successfully" : response.ReasonPhrase;
+        
+        CryptographicOperations.ZeroMemory(passwordBytes);
         _isSubmitting = false;
     }
 }
