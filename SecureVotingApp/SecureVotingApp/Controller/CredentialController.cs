@@ -1,3 +1,4 @@
+//@author Moïse
 //designates class as Api controller automatical model validation and Http response behaviours
 [ApiController]
 
@@ -7,6 +8,7 @@
 //route for the controller 
 [Route("api/elections/{electionId}/credential")]
 
+//class for handling credential requests from the client
 public class CredentialController : ControllerBase
 {
     [HttpPost]
