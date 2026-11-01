@@ -35,12 +35,12 @@ builder.Services                //exactly the same as .AddAuthentication("Cookie
 // Standard rules are explicitly for non-anonymous requests - where an authorized user is making requests (e.g.,Voting)
 builder.Services.AddCustomRateLimiter();
 
-builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddCascadingAuthenticationState(); // Shared authentication state with client (Lorenzo)
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
-    .AddInteractiveWebAssemblyComponents()
+    .AddInteractiveWebAssemblyComponents() // Allows blazor client to render page and keep sensitive information away from server or transmission over network
     .AddAuthenticationStateSerialization(); // Shared authentication state with client
 
 // Add API Controllers - None currently exist but will be needed for future
@@ -72,7 +72,7 @@ app.UseHttpsRedirection();
 
 //cookies (Jeán Walton)
 app.UseAuthentication();//app.Use... adds middleware to the HTTP request pipeline
-app.UseRateLimiter(); // Rate Limiter middleware requires that authentication middleware service is active - must come after to ensure working rate limiter association to IP / Use
+app.UseRateLimiter(); // Rate Limiter middleware requires that authentication middleware service is active - must come after to ensure working rate limiter association to IP / Use (Lorenzo)
 app.UseAuthorization();
 
 app.UseAntiforgery();

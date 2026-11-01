@@ -1,6 +1,7 @@
 @page "/register"
 @rendermode @(new InteractiveWebAssemblyRenderMode(
                 prerender: false))
+@using System.Net
 @using System.Security.Cryptography
 @using System.Text
 @using TopSecret.Cryptography
@@ -84,8 +85,19 @@
                 "api/auth/login",
                 userPayload);
         
-            _message = response.IsSuccessStatusCode ? "Login Successful" : response.ReasonPhrase;
-            if (response.IsSuccessStatusCode) Navigation.NavigateTo("/account", forceLoad: true);
+            _message = loginResponse.IsSuccessStatusCode ? "Login Successful" : response.ReasonPhrase;
+            if (loginResponse.IsSuccessStatusCode || loginResponse.StatusCode == HttpStatusCode.TooManyRequests)
+            {
+                Navigation.NavigateTo("/account", forceLoad: true);
+            }
+            else
+            {
+                _message = $"{await loginResponse.Content.ReadAsStringAsync()}";
+            }
+        }
+        else if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            _message = "Too many requests. Please try again later";
         }
         else
         {

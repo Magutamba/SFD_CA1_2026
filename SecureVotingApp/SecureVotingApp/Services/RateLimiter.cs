@@ -22,7 +22,7 @@ public static class RateLimiter
                 {
                     Status = StatusCodes.Status429TooManyRequests,
                     Title = "Too Many Requests", 
-                    Detail = "API rate limit exceeded. Please check your request frequency or back off temporarily.",
+                    Detail = "Request limit exceeded. Please try again later.",
                     Instance = context.HttpContext.Request.Path
                 }, cancellationToken);
             };
