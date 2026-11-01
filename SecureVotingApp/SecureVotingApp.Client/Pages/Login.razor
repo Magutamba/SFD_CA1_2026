@@ -42,7 +42,7 @@
         
         if (string.IsNullOrWhiteSpace(savedSalt))
         {
-            _message = "Error retrieving account details, please contact support";
+            _message += "Error retrieving account details, please contact support. ";
             _isSubmitting = false;
             return;
         }
@@ -77,12 +77,10 @@
         } else if (response.StatusCode == HttpStatusCode.TooManyRequests)
         {
             _message = "Too many requests. Please try again later";
+            _isSubmitting = false;
             return;
         }
         
-        _message = response.IsSuccessStatusCode ? "Login Successful" : $"{await response.Content.ReadAsStringAsync()}";
-        
-
         _isSubmitting = false;
     }
     
@@ -101,12 +99,12 @@
         
         if (!saltResponse.IsSuccessStatusCode)
         {
-            _message = $"Error retrieving details: {await saltResponse.Content.ReadAsStringAsync()}";
+            _message = $"Error retrieving details: {await saltResponse.Content.ReadAsStringAsync()}. ";
             return "";
         }
         if (saltResponse.StatusCode == HttpStatusCode.TooManyRequests)
         {
-            _message = "Too many requests. Please try again later";
+            _message = "Too many requests. Please try again later. ";
             return "";
         }
         

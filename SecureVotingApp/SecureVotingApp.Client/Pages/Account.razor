@@ -1,5 +1,6 @@
 @page "/account"
 
+@using System.Net
 @using Microsoft.AspNetCore.Components.Authorization
 
 @rendermode @(new InteractiveWebAssemblyRenderMode(
@@ -11,6 +12,7 @@
     <Authorized>
         <p>Logged into system. Welcome</p>
         <button type="submit" @onclick="@Logout">Logout</button>
+        <p role="status">@_message</p>
     </Authorized>
     <NotAuthorized>
         <NavLink class="nav-link" href="login">
@@ -24,13 +26,20 @@
 </AuthorizeView>
     
 @code {
-
+    private string? _message = null;
     private async void Logout()
     {
         using var response = await Http.PostAsync(
             "api/auth/logout",
             content: null);
 
-        if (response.IsSuccessStatusCode) Navigation.NavigateTo("/", forceLoad: true);
+        if (response.IsSuccessStatusCode)
+        {
+            Navigation.NavigateTo("/", forceLoad: true);
+        }
+        else if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            _message = "Too many requests. Please try again later";
+        }
     }
 }
