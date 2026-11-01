@@ -11,7 +11,7 @@ public class CredentialRequest
      public string ElectionId {get; set;} = string.Empty;
 
     //created then blinded in client before sending to server prevents server from knowing voter id
-    [Required] [BlindedCredential]  public string Credential {get;set;} = string.Empty;
+    [Required] public string BlindedCredential {get;set;} = string.Empty;
     
     // [Required] 
     // //anonymous signed credential issued after
