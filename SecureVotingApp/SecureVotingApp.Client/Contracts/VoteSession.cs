@@ -24,7 +24,7 @@ public class VotingSession
     [Required]
     public string VoteChoice {get;set;} = string.Empty;
     
-    //candididate choice
+    //candididate name
     [Required]
-    public string CandidateChoice {get;set;} = string.Empty; 
+    public string CandidateName {get;set;} = string.Empty; 
 }

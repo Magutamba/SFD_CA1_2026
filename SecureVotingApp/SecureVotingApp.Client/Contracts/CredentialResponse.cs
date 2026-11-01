@@ -16,7 +16,7 @@ public class CredentialResponse
     //candidates for the election
     public List<string> Candidates {get;set;} = new List<string>();
     //yes no vote, will pick which later
-    public List<string> YesNoChoices {get;set;} = new List<string>();
+    public List<string> Choices {get;set;} = new List<string>();
 
-    
+
 }   
