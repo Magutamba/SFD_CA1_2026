@@ -12,12 +12,9 @@ public class VotingSession
     //identify the election the voter is voting in
      public string ElectionId {get; set;} = string.Empty;
 
-    //created then blinded in client before sending to server prevents server from knowing voter id
-    [Required] [BlindedCredential]  public string Credential {get;set;} = string.Empty;
-
-    //signed blindend credential issued by server after checking voter is logged in and hasn't voted
+    //anonymous signed blindend credential issued by server after checking voter is logged in and hasn't voted
     [Required]
-    public string SignedBlindedCredential {get;set;} =string.Empty;
+    public string AnonymousCredential {get;set;} =string.Empty;
 
     [Required]
     //is eligible to vote
