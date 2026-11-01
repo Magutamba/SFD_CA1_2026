@@ -74,7 +74,7 @@ public class VoterApiClient
             Candidates = credentialResponse.Candidates,
             //will choose later between candidate and yes/no token or expiry
             VoteChoice = credentialResponse.VoteChoice,
-            ExpiresAt = credentialResponse.ExpiresAt,
+            ExpiresAt = credentialResponse.ExpiresAt, //choice between token or expiry will be made later
             AsVotedToken = credentialResponse.AsVotedToken
         };
 
