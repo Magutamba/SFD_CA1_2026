@@ -29,6 +29,11 @@ builder.Services                //exactly the same as .AddAuthentication("Cookie
         options.SlidingExpiration = false;//disable automatic renewal
     });
 
+// Add rate limiting service to build (Lorenzo)
+// Contains strict and standard rules to be associated with API controllers to limit rate at which requests can be sent by client
+// Strict rules are explicitly for anonymous requests - where no user has been authorized (e.g., Login)
+// Standard rules are explicitly for non-anonymous requests - where an authorized user is making requests (e.g.,Voting)
+builder.Services.AddCustomRateLimiter();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -64,6 +69,7 @@ app.UseHttpsRedirection();
 
 //cookies (Jeán Walton)
 app.UseAuthentication();//app.Use... adds middleware to the HTTP request pipeline
+app.UseRateLimiter(); // Rate Limiter middleware requires that authentication middleware service is active - must come after to ensure working rate limiter association to IP / Use
 app.UseAuthorization();
 
 app.UseAntiforgery();

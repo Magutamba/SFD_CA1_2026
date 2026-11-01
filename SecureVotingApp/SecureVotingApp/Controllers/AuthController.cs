@@ -17,6 +17,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 
 /*
     Claim — Represents one piece of information about a user.
@@ -45,6 +46,7 @@ public class AuthController : ControllerBase
     }
     
     [HttpPost("register")]
+    [EnableRateLimiting("StrictAuthPolicy")]
     public async Task<IActionResult> UserRegistration([FromBody] UserRegistrationDto request)
     {   
         
@@ -125,6 +127,7 @@ public class AuthController : ControllerBase
 
 
     [HttpPost("login")]
+    [EnableRateLimiting("StrictAuthPolicy")]
     public async Task<IActionResult> UserLogin([FromBody] UserLoginDto request)
     {
         
@@ -184,7 +187,9 @@ public class AuthController : ControllerBase
     }
 
     //for obscurity reason named it details...for users.salt and the post so it does not show in the URI
+    
     [HttpPost("details")]
+    [EnableRateLimiting("StrictAuthPolicy")]
     public async Task<IActionResult> UserSalt([FromBody] SaltRequestDto request)
     {
          //validate is a email before assigning
@@ -213,6 +218,7 @@ public class AuthController : ControllerBase
     //logout
     [HttpPost("logout")]
     [Authorize]
+    [EnableRateLimiting("StandardAuthPolicy")]
     
     public async Task<IActionResult> Logout()
     {   
