@@ -5,12 +5,15 @@ namespace SecureVotingApp.Client.Services;
 //store information about the credential state of the current voting session
 public class CredentialService
 {   
+    //server
+    private readonly CredentialSigner credentialSigner;
     //state store to persist credential issued per user session
     private readonly CredentialStateStore stateStore;
 
     //constructor to inject the state store dependency
-    public CredentialService(CredentialStateStore stateStore)
+    public CredentialService(CredentialSigner credentialSigner,CredentialStateStore stateStore)
     {
+        this.credentialSigner = credentialSigner;
         this.stateStore = stateStore;
     }
 
