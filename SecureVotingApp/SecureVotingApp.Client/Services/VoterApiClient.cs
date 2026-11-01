@@ -1,4 +1,4 @@
-//@author Moïse 
+ //@author Moïse
 //provide JSON helper extension methods for HtppClient(GETFromAsyncJson)
 //symplify JSON serialization and deserialization when calling API endpoints 
 using System.Net.Http.Json;

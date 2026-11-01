@@ -6,7 +6,7 @@ namespace SecureVotingApp.Client.Services;
 public class BlindCredentialRequest
 {
     //blinded credential
-    public string BlindCredential { get; set; } = string.Empty;
+    public string BlindedCredential { get; set; } = string.Empty;
     //kept in browser only to unblind
     public BlindState State { get; set; } = new BlindState();
 }
