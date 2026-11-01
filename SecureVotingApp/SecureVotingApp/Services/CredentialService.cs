@@ -43,7 +43,7 @@ public class CredentialService
     //cryptographic execution of RSA blind signing
     private string BlindSigner(string blindedCredential)
     {
-        
+        string SignedBlindedCredential = credentialSigner.SignBlindedCredential(request.BlindedCredential);
     }
     }
 }
