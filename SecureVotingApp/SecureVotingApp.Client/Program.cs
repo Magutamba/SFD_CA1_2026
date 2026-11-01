@@ -8,4 +8,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 // register the BlindCredential service with the dependency injection container
 builder.Services.AddScoped<IBlindCredential,BlindCredential>();
+//registers the HTTP AP
+// Orchestrates the two-phase voting protocol: requesting credentials via authenticated endpoints
+// and submitting anonymous votes via unauthenticated endpoints.
 await builder.Build().RunAsync();
