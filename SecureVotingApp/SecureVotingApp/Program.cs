@@ -35,10 +35,13 @@ builder.Services                //exactly the same as .AddAuthentication("Cookie
 // Standard rules are explicitly for non-anonymous requests - where an authorized user is making requests (e.g.,Voting)
 builder.Services.AddCustomRateLimiter();
 
+builder.Services.AddCascadingAuthenticationState();
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
-    .AddInteractiveWebAssemblyComponents();
+    .AddInteractiveWebAssemblyComponents()
+    .AddAuthenticationStateSerialization(); // Shared authentication state with client
 
 // Add API Controllers - None currently exist but will be needed for future
 builder.Services.AddControllers();

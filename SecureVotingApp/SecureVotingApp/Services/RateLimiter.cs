@@ -29,9 +29,9 @@ public static class RateLimiter
             
             // General Rule for following policies -
             // If an endpoint contains the attribute [Authorize] - it requires that the requester has been authorized via Login
-            // These endpoints must use the [EnableRateLimiting("StandardAuthPolicy")] attribute
+            // These endpoints must use the [EnableRateLimiting("StandardPolicy")] attribute
             
-            // Anonymous endpoints that do not require authorized access should use [EnableRateLimiting("StrictAuthPolicy")]
+            // Anonymous endpoints that do not require authorized access should use [EnableRateLimiting("StrictPolicy")]
             
             // Note: Controllers themselves can be given the Rate Limiting attribute if all endpoints are either anonymous or nonanonymous
             // If a controller has a mix of these endpoints each endpoint must contain the attribute definition based on its need
@@ -41,7 +41,7 @@ public static class RateLimiter
             // Rate Limiting policy in this case is associated to the HTTP Context's principal user
             // The user is found based on their name identifier - based on the current implementation in the auth controller this is the user's ID
             // If the user by ID could not be found - a redundant "AuthUser" name and their IP address is used
-            options.AddPolicy("StandardApiPolicy", httpContext =>
+            options.AddPolicy("StandardPolicy", httpContext =>
             {
                 // User details are taken from the server's HTTP Context to extract the user and use their details or IP address as the key for the rate limiter token bucket
                 var partitionKey = httpContext.User.Identity?.IsAuthenticated == true
@@ -66,7 +66,7 @@ public static class RateLimiter
             // POLICY B: Strict Auth Policy
             // Explicitly for users that have not been authenticated by the server
             // Rate Limiting policy is associated to the requester's IP address - if no such can be determined the IP address is defaulted to "AnonymousIP" and shares the same token limit as other unknown IP addresses
-            options.AddPolicy("StrictAuthPolicy", httpContext =>
+            options.AddPolicy("StrictPolicy", httpContext =>
             {
                 // Extract user's IP address for token key
                 var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString() ?? "AnonymousIP";

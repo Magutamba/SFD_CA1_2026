@@ -1,11 +1,11 @@
 @page "/login"
 @rendermode @(new InteractiveWebAssemblyRenderMode(
                 prerender: false))
-@using System.Security.Cryptography
 @using System.Text
 @using TopSecret.Cryptography
 @using SecureVotingApp.Components.Contracts
 @inject HttpClient Http
+@inject NavigationManager Navigation
 
 <h3>Login Account</h3>
 
@@ -28,14 +28,17 @@
     <p role="status">@_request.Password</p>
     <p role="status">salt from server: @_saltFromServer </p>
     <p role="status">@apiResponse</p>
+    <p role="status">validated: @validated</p>
 }
+
 
 @code {
     private readonly LoginRequest _request = new();
     private string? _message;
     private bool _isSubmitting; // if this value is true - the submit button is disabled
     private string? _saltFromServer = string.Empty;
-
+    public bool validated;
+    
     private string? apiResponse = string.Empty;
     
     public async Task LoginAsync()
@@ -102,7 +105,12 @@
             userPayload);
         
         _message = response.IsSuccessStatusCode ? "Login Successful" : response.ReasonPhrase;
+        if (response.IsSuccessStatusCode) Navigation.NavigateTo("/account", forceLoad: true);
 
+        using var validate = await Http.GetAsync("api/auth/me");
+
+        if (validate.IsSuccessStatusCode) validated = true;
+        
         _isSubmitting = false;
     }
 }

@@ -1,33 +1,36 @@
-@page "/authentication"
+@page "/account"
+
+@using Microsoft.AspNetCore.Components.Authorization
+
 @rendermode @(new InteractiveWebAssemblyRenderMode(
-                prerender: true))
+                prerender: false))
+@inject HttpClient Http
+@inject NavigationManager Navigation
 <h3>Account</h3>
-@if (_authenticated)
-{
-    <section>
-        <p>Welcome: @_email</p>
-    </section>
-}else {
-<section>
-    <NavLink class="nav-link" href="login">
-        <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Login Link
-    </NavLink>
+<AuthorizeView>
+    <Authorized>
+        <p>Logged into system. Welcome</p>
+        <button type="submit" @onclick="@Logout">Logout</button>
+    </Authorized>
+    <NotAuthorized>
+        <NavLink class="nav-link" href="login">
+            <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Login Link
+        </NavLink>
 
-    <NavLink class="nav-link" href="register">
-        <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Register Link
-    </NavLink>
-</section>
-}
-
-<button @onclick="Authenticate">Authenticate</button>
-
-
+        <NavLink class="nav-link" href="register">
+            <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Register Link
+        </NavLink>
+    </NotAuthorized>
+</AuthorizeView>
+    
 @code {
-    private string _email = string.Empty;
-    private bool _authenticated = false;
 
-    public void Authenticate()
+    private async void Logout()
     {
-        _authenticated = true;
+        using var response = await Http.PostAsync(
+            "api/auth/logout",
+            content: null);
+
+        if (response.IsSuccessStatusCode) Navigation.NavigateTo("/", forceLoad: true);
     }
 }
