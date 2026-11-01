@@ -5,7 +5,7 @@ namespace SecureVotingApp.Client.Services;
 public interface IBlindCredentialClient
 {
     //creates a random credential and blinds it in client
-    BlindCredentialRequest CreateBlindedCredential(atring electionId);
+    BlindCredentialRequest CreateBlindedCredential(string electionId);
 
     //remove the blinding from the signed credential
     string unblindCrdential(string signedBlindedCredential, BlindState state);
