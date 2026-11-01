@@ -70,7 +70,7 @@ public class VoterApiClient
         return new VotingSession
         {
             ElectionId = credentialResponse.ElectionId,
-            SignedBlindedCredential = anonymousCredential,
+            AnonymousCredential = anonymousCredential,
             Candidates = credentialResponse.Candidates,
             //will choose later between candidate and yes/no token or expiry
             VoteChoice = credentialResponse.VoteChoice,
