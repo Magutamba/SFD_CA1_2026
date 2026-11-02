@@ -55,6 +55,9 @@ appsettings.Local.json
 appsettings.*.Local.json
 secrets.json
 
+## PEM-encoded certificate data
+*.pem
+
 # Local publish settings (may contain credentials)
 *.pubxml
 *.pubxml.user
