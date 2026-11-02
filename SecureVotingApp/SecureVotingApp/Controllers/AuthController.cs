@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using OtpNet;
 using Microsoft.EntityFrameworkCore.Query;
+using Microsoft.AspNetCore.RateLimiting;
 
 /*
     Claim — Represents one piece of information about a user.
@@ -52,6 +53,7 @@ public class AuthController : ControllerBase
     }
     
     [HttpPost("register")]
+    [EnableRateLimiting("StrictPolicy")]
     public async Task<IActionResult> UserRegistration([FromBody] UserRegistrationDto request)
     {   
         
@@ -231,6 +233,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting("StrictPolicy")]
     public async Task<IActionResult> UserLogin([FromBody] UserLoginDto request)
     {
         
@@ -276,6 +279,8 @@ public class AuthController : ControllerBase
         {
             return Unauthorized("Invalid credentials");
         }
+        
+        if(!isValidPassword) return Unauthorized("Invalid credentials");
 
         // Require a configured TOTP secret for every account.
         if (string.IsNullOrWhiteSpace(user.TotpSecret))
@@ -332,7 +337,9 @@ public class AuthController : ControllerBase
     }
 
     //for obscurity reason named it details...for users.salt and the post so it does not show in the URI
+    
     [HttpPost("details")]
+    [EnableRateLimiting("StrictPolicy")]
     public async Task<IActionResult> UserSalt([FromBody] SaltRequestDto request)
     {
          //validate is a email before assigning
@@ -361,6 +368,7 @@ public class AuthController : ControllerBase
     //logout
     [HttpPost("logout")]
     [Authorize]
+    [EnableRateLimiting("StandardPolicy")]
     
     public async Task<IActionResult> Logout()
     {   
