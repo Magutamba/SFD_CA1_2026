@@ -20,8 +20,6 @@ public class VotingSession
     //is eligible to vote
     public string isEligible {get;set;} = string.Empty;
 
-    //prevents submission after expiry
-    public DateTimeOffset ExpiresAt {get;set;} = string.Empty;
     //token to prevent double voting
     public string AsVotedToke {get;set;} = string.Empty;
     //the vote cast by the voter

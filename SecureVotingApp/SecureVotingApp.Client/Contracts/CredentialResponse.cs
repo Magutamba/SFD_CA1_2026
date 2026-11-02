@@ -12,11 +12,12 @@ public class CredentialResponse
 
     //signed blindend credential issued by server after checking voter is logged in and hasn't voted
     public string SignedBlindedCredential {get;set;} =string.Empty;
-
-    //candidates for the election
-    public List<string> Candidates {get;set;} = new List<string>();
+    
     //yes no vote, will pick which later
-    public List<string> Choices {get;set;} = new List<string>();
+    public string Choices {get;set;} = new string;
 
+    //the signed credential expires at this time
 
+    public DateTimeOffset CredentialExpiresAt {get;set;}
+    
 }   

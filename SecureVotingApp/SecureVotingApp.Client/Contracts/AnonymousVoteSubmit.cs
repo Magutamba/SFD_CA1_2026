@@ -18,9 +18,7 @@ public class AnonymousVoteSubmit
     public string AnonymousCredential {get;set;} = string.Empty;
 
     [Required]
-    //is eligible to vote
-    public string isEligible {get;set;} = string.Empty;
-
+    //opaque token
     //the vote cast by the voter
     [Required]
     public string VoteChoice {get;set;} = string.Empty;
