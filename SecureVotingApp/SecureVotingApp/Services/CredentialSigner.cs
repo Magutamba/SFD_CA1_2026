@@ -26,7 +26,7 @@ public class CredentialSigner
     public CredentialSigner(string privateKeyPath)
     {
         //load the private key once when in the service
-        using var reader = File.openText(privateKeyPath);
+        using var reader = File.OpenText(privateKeyPath);
         var pemReader = new PemReader(reader);
 
         //parse the keyobject from the PEM file
