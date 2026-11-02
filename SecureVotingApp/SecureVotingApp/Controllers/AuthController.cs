@@ -164,7 +164,7 @@ public class AuthController : ControllerBase
 
         //to verify credentials 
         bool isValidPassword = _bcryptService.VerifyCredential(request.Argon2Hash, user.CredentialHash);
-        if(!isValidPassword) return Unauthorized("Invalid Password");
+        if(!isValidPassword) return Unauthorized("Invalid credentials");
 
 
         //collection of claims

@@ -101,7 +101,7 @@
         }
         else
         {
-            _message = response.ReasonPhrase;
+            _message = "Email already in use. Please try a new email";
         }
         
         CryptographicOperations.ZeroMemory(passwordBytes);

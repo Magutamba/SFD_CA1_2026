@@ -74,11 +74,14 @@
         if (response.IsSuccessStatusCode)
         {
             Navigation.NavigateTo("/account", forceLoad: true);
-        } else if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        } 
+        else if (response.StatusCode == HttpStatusCode.TooManyRequests)
         {
             _message = "Too many requests. Please try again later";
-            _isSubmitting = false;
-            return;
+        }
+        else
+        {
+            _message = "Invalid credentials. Please try again";
         }
         
         _isSubmitting = false;
@@ -97,7 +100,7 @@
             "api/auth/details",
             saltPayload);
         
-        if (!saltResponse.IsSuccessStatusCode)
+        if (saltResponse.IsSuccessStatusCode)
         {
             _message = $"Error retrieving details: {await saltResponse.Content.ReadAsStringAsync()}. ";
             return "";
@@ -107,6 +110,7 @@
             _message = "Too many requests. Please try again later. ";
             return "";
         }
+        
         
         var saltResult = await saltResponse.Content.ReadFromJsonAsync<SaltResponse>();
 
