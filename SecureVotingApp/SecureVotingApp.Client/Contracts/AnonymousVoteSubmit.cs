@@ -16,7 +16,7 @@ public class AnonymousVoteSubmit
     //anonymous signed credential issued after
     // authorises the voter to cast their vote without exposing their identity 
     public string AnonymousCredential {get;set;} = string.Empty;
-    
+
     [Required]
     //is eligible to vote
     public string isEligible {get;set;} = string.Empty;
@@ -24,12 +24,5 @@ public class AnonymousVoteSubmit
     //the vote cast by the voter
     [Required]
     public string VoteChoice {get;set;} = string.Empty;
-
-    //candididate choice
-    [Required]
-    public string CandidateChoice {get;set;} = string.Empty; 
-
-
-
 
 }
