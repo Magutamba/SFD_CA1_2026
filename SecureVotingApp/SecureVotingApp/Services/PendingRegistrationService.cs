@@ -10,7 +10,9 @@ namespace SecureVotingApp.Services;
 
 public class PendingRegistrationService
 {
-    private readonly IMemoryCache _cache;
+    private readonly IMemoryCache _cache; //is thread safe
+
+    private readonly object _registrationLock = new();//is an object used to only execute one request at a time
 
     public PendingRegistrationService(IMemoryCache cache)
     {
@@ -19,7 +21,8 @@ public class PendingRegistrationService
 
     // Store registration details temporarily until 2FA setup is confirmed.
     public string CreatePendingRegistration(PendingRegistration registration)
-    {
+    {   
+
         // Generate a cryptographically secure, random reference.
         byte[] randomBytes = RandomNumberGenerator.GetBytes(32);
         string registrationId = Convert.ToBase64String(randomBytes);
@@ -62,22 +65,26 @@ public class PendingRegistrationService
 
     // Record an invalid TOTP attempt and cancel registration after 5 failures.
     public bool RecordFailedAttempt(string registrationId)
-    {
-        var pending = GetPendingRegistration(registrationId);
-
-        if (pending is null)
+    {   //lock: prevents two or more requests from modifyying the same shared data at the same time.
+        lock (_registrationLock) 
         {
-            return false;
+             var pending = GetPendingRegistration(registrationId);
+
+            if (pending is null)
+            {
+                return false;
+            }
+
+            pending.FailedAttempts++;
+
+            if (pending.FailedAttempts >= 5)
+            {
+                RemovePendingRegistration(registrationId);
+                return false;
+            }
+
+            return true;
         }
-
-        pending.FailedAttempts++;
-
-        if (pending.FailedAttempts >= 5)
-        {
-            RemovePendingRegistration(registrationId);
-            return false;
-        }
-
-        return true;
+       
     }
 }

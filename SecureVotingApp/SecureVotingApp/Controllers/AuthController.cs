@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using OtpNet;
+using Microsoft.EntityFrameworkCore.Query;
 
 /*
     Claim — Represents one piece of information about a user.
@@ -184,7 +185,8 @@ public class AuthController : ControllerBase
         // Verify the first authenticator code before creating the account.
         bool isValidCode = _totpService.VerifyTOTPCode(
             pendingUser.TotpSecret,
-            request.Code
+            request.Code,
+            out long registrationTimeStep //registration time step 
         );
 
         // Reject an incorrect authenticator code.
@@ -204,7 +206,8 @@ public class AuthController : ControllerBase
             Email = pendingUser.Email,
             CredentialHash = pendingUser.CredentialHash,
             Argon2Salt = pendingUser.Argon2Salt,
-            TotpSecret = encryptedSecret
+            TotpSecret = encryptedSecret,
+            LastUsedTotpTimeStep = registrationTimeStep
         };
 
          _dbContext.Users.Add(newUser); //EF Core to trake newUser as a new record
@@ -287,13 +290,27 @@ public class AuthController : ControllerBase
         // Verify the six-digit authenticator code.
         bool isValidTotp = _totpService.VerifyTOTPCode(
             secret,//in voting db
-            request.Code//the user input 2FA code
+            request.Code,//the user input 2FA code
+            out long loginTimeStep // login time step saved
         );
 
         if (!isValidTotp)
         {
             return Unauthorized("Invalid credentials");
         }
+
+        // Check whether this TOTP time step has already been used.
+        if (user.LastUsedTotpTimeStep.HasValue &&
+            loginTimeStep <= user.LastUsedTotpTimeStep.Value)
+        {
+            return Unauthorized("Invalid credentials");
+        }
+
+        // Remember the successfully used time step.
+        user.LastUsedTotpTimeStep = loginTimeStep;
+
+        // Save the change to SQLite.
+        await _dbContext.SaveChangesAsync();
 
         //collection of claims
         var claimId = new Claim(ClaimTypes.NameIdentifier, user.Id.ToString());

@@ -5,13 +5,24 @@
 using Xunit;
 using OtpNet;
 using SecureVotingApp.Services;
+using Microsoft.Extensions.Logging;
+using Microsoft.VisualBasic;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace SecureVotingApp.Tests;
 
 public class TotpServiceTests
-{
-    private readonly TotpService _totpService = new TotpService();
+{   
+    // Provides encryption services for testing.(buildin dotnet)
+    private readonly IDataProtectionProvider provider =
+    DataProtectionProvider.Create("SecureVotingApp.Tests");
+    private readonly TotpService _totpService;
     
+    public TotpServiceTests()
+    {
+        _totpService = new TotpService(provider);
+    }
+   
     [Fact]
     public void VerifyTOTPCode_WithValidCode_ReturnsTrue()
     {
@@ -24,7 +35,7 @@ public class TotpServiceTests
         string code = totp.ComputeTotp();
 
         // Act
-        bool result = _totpService.VerifyTOTPCode(secret, code);
+        bool result = _totpService.VerifyTOTPCode(secret, code, out long timeStepMatched);
 
         // Assert
         Assert.True(result);
@@ -38,7 +49,7 @@ public class TotpServiceTests
         string invalidCode = "ABCDEF";
 
         // Act
-        bool result = _totpService.VerifyTOTPCode(secret, invalidCode);
+        bool result = _totpService.VerifyTOTPCode(secret, invalidCode, out long timeStepMatched);
 
         // Assert
         Assert.False(result);
@@ -59,7 +70,7 @@ public class TotpServiceTests
         string incorrectCode = otherTotp.ComputeTotp();
 
         // Act
-        bool result = _totpService.VerifyTOTPCode(secret, incorrectCode);
+        bool result = _totpService.VerifyTOTPCode(secret, incorrectCode, out long timeStepMatched);
 
         // Assert
         Assert.False(result);

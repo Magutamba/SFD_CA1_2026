@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using SecureVotingApp.Data;
+using SecureVotingApp.Services;
 
 
 
@@ -23,10 +24,17 @@ public class AuthTestFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureTestServices(services =>
-        {
+        {   
            //remove the applications existing database configuration 
             services.RemoveAll<DbContextOptions<AppDbContext>>();
             services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
+
+            // Register the TOTP service needed by AuthController.
+            services.AddScoped<TotpService>();
+
+            // Register temporary registration storage.
+            services.AddMemoryCache();
+            services.AddSingleton<PendingRegistrationService>();
 
             //Register AppDbContext using our temporary SQLite connection
             services.AddDbContext<AppDbContext>(options => options.UseSqlite(_sqlitConnection)); 

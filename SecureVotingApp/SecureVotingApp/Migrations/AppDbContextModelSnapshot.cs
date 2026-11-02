@@ -34,7 +34,11 @@ namespace SecureVotingApp.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<long?>("LastUsedTotpTimeStep")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("TotpSecret")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
