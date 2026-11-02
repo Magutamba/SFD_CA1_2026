@@ -9,7 +9,8 @@ builder.Services.AddRazorComponents()
 
 // Add API Controllers - None currently exist but will be needed for future
 builder.Services.AddControllers();
-
+//add singletton service for signing credentials with RSA private key 
+builder.Services.AddSingleton<CredentialSigner>(_ => new CredentialSigner("Keys/voting_signing_key.pem"));
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
