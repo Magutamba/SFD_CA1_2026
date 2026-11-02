@@ -22,7 +22,12 @@ public class CredentialService
         string userId, string electionId, CredentialRequest request)
     {
 
-
+        //ensure electionId match
+        if(reques.ElectionId != electionId)
+        {
+            throw new InvalidOperationException("The election id does not match");
+        }
+        
         //prevent the same user receiving two credentials for the same election
         if (stateStore.HasBeenCredentialed(electionId))
         {
@@ -40,6 +45,8 @@ public class CredentialService
         //sign request.BlindCredential using the server private signing key managed
         string signedValue = SignBlindedCredential(request.BlindedCredential);
 
+        //record issuance of credential to prevent double voting after signing
+        stateSotre.MarkIssued(userId, electionId);
         return Task.FromResult(new CredentialResponse
         {
             ElectionId = electionId,
