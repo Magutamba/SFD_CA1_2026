@@ -1,13 +1,48 @@
-@page "/vote"
-<--Moïse --></>
+@page "/vote/{ElectionId}"
+<!-- @author Moïse *-->
+
+<!--et the Contracts and Services*-->
+@using SecureVotingApp.Components.Contracts
+@using SecureVotingApp.Components.Services
+
+@inject VoterApiClient VoterApiClient
+
 <PageTitle>Vote</PageTitle>
 
 <h1>Vote</h1>
+<div class"container mt-4"></div>
+<p>Request Credentials to vote</p>
+<!-- Display the election the voter is participating in -->
 
-<p>Rquest Credentials to vote</p>
+<p>
+    <strong>Election Id</strong> @ElectionId
+</p>
+
+<!--show the credential request button before session starts --->
+
+@if(votingSession == null)
+{
+   <button class="btn btn-primary"
+         @onClick={RequestCredentials}
+         disabled="@isLoading">
+          @(isLoading ? "Requesting credentials..." : "Request Credentials")
+    </button>
+}
 
 <div>
     <button class="btn btn-primary" @onClick={RequestCredentials}>Request Credentials</button>
+</div><!-- show the voting form after session
+@if(votingSession!=null && receipt == null)
+{
+    <hr />
+    <h3> Voting Credential Issued</h3>
+    <p> Your credential as been issued.</p>
+
+    <!-- display credential expiry time-->
+    <p>
+        <strong> Credential Expiry:</strong>@votingSession.ExpireAt.ToLocalTime()
+    </p>
+}
 </div>
 @code {
     private async Task RequestCredentials()

@@ -119,10 +119,12 @@ public class VoterApiClient
         response.EnsureSuccessStatusCode();
 
         // deserialize the response content to a VoteReceipt object which contains confirmation of vote submission
-        return await response.Content.ReadFromJsonAsync<VoteReceipt>()
+        VoteReceipt = await response.Content.ReadFromJsonAsync<VoteReceipt>()
             ?? throw new InvalidOperationException("The vote response was empty."
             );
 
+        //return confirmation of accepted vote 
+        return receipt;
 
     }
 }
