@@ -9,7 +9,7 @@ public class CredentialStateStore
     private readonly HashSet<string> issuedCredentials = new ();
 
     //check if voter has already been issued a credential for the given election 
-    public bool HasBeenCredentialed(string userId, string electionId)
+    public bool HasBeenCredentialed(string electionId)
     {
         return issuedCredentials.Contains(userId + ":" + electionId);
     }
@@ -17,6 +17,6 @@ public class CredentialStateStore
     //mark that a credential as been issued and store to prevent double voting
     public void MarkIssued(string userId, string electionId)
     {
-        issued.Add(userId + ":" + electionId);
+        issuedCredentials.Add(userId + ":" + electionId);
     }
 }

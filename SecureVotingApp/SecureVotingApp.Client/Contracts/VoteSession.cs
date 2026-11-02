@@ -26,9 +26,8 @@ public class VotingSession
     public string AsVotedToke {get;set;} = string.Empty;
     //the vote cast by the voter
     [Required]
-    public string VoteChoice {get;set;} = string.Empty;
-    
-    //candididate name
-    [Required]
-    public string CandidateName {get;set;} = string.Empty; 
+    public string VoteChoice {get;set;} 
+
+    //the signed credential expires at this time
+    public DateTimeOffSet CredentialExpiresAt {get;set;}
 }

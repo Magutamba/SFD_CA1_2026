@@ -25,7 +25,7 @@ public class CredentialService
     
     //prevent the same user receiving two credentials for the same election
     if (stateStore.HasBeenCredentialed(electionId)){
-        throw new InvlidOperationException(
+        throw new InvalidOperationException(
             "A credential has already been issued for this election."
             );
     }
