@@ -22,6 +22,12 @@ public class CredentialController : ControllerBase
     //inject the credential service to handle signing of blinded credentials
     private readonly CredentialService credentialService;
 
+    //inject the credential service to the controller via dependency injection
+    public CredentialController(CredentialService credentialService)
+    {
+        this.credentialService = credentialService;
+    }
+
     [HttpPost]
     public IActionResult IssueCredential(string electionId,CredentialRequest request)
     {
@@ -32,8 +38,16 @@ public class CredentialController : ControllerBase
             return Unauthorized();
         }
 
-        //check userId + electionId in the database to prevent second credential request
-        //return 200 OK 
-        return Ok();
+        try
+        {
+            //request credential service to sign blinded credential
+            CredentialResponse result = await credentialService.issueAsync(userId,electionId,request);
+
+            return Ok(result);
+        }catch(Exception e)
+        {
+            //return conflict if the user already received a credential for this election
+            return conflict(new {message = e.getMessage()});
+        }
     }
 }
