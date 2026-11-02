@@ -32,7 +32,7 @@ public class VoterApiClient
         BlindCredentialRequest blindRequest = blindVoterClient.CreateBlindedCredential(electionId);
 
         //send the blinded credential to the server and request a signed credential and ballot
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"api/Vote/{electionId}/credential");
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"api/elections/{electionId}/credential");
 
         //the login cookie is included so server can verify voter logged in
         request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);

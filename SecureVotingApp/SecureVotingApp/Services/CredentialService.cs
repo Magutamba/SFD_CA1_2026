@@ -48,5 +48,4 @@ public class CredentialService
     {
         string SignedBlindedCredential = credentialSigner.SignBlindedCredential(request.BlindedCredential);
     }
-    }
 }
