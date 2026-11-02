@@ -10,17 +10,14 @@
 @inject NavigationManager Navigation
 <h3>Create Account</h3>
 
-<p>Renderer: @RendererInfo.Name</p>
-<p>Interactive: @RendererInfo.IsInteractive</p>
-
 <EditForm Model="_request" FormName="AccountRegistration" OnValidSubmit="RegisterAsync">
-    <label>Email</label>
-    <InputText @bind-Value="_request.Email"/>
+    <label>Email</label><br/>
+    <InputText @bind-Value="_request.Email"/><br/>
     
-    <label>Password</label>
-    <InputText type="password" @bind-Value="_request.Password"/>
-    <label>Confirm Password</label>
-    <InputText type="password" @bind-Value="_request.ConfirmPassword"/>
+    <label>Password</label><br/>
+    <InputText type="password" @bind-Value="_request.Password"/><br/>
+    <label>Confirm Password</label><br/>
+    <InputText type="password" @bind-Value="_request.ConfirmPassword"/><br/>
     <button type="submit" disabled="@_isSubmitting">Create Account</button>
     
     <DataAnnotationsValidator/>

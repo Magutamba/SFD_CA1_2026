@@ -11,11 +11,11 @@
 <h3>Login Account</h3>
 
 <EditForm Model="_request" FormName="AccountLogin" OnValidSubmit="LoginAsync">
-    <label>Email</label>
-    <InputText @bind-Value="_request.Email"/>
+    <label>Email</label><br/>
+    <InputText @bind-Value="_request.Email"/><br/>
     
-    <label>Password</label>
-    <InputText type="password" @bind-Value="_request.Password"/>
+    <label>Password</label><br/>
+    <InputText type="password" @bind-Value="_request.Password"/><br/>
     <button type="submit" disabled="@_isSubmitting">Login</button>
     
     <DataAnnotationsValidator/>
@@ -100,14 +100,14 @@
             "api/auth/details",
             saltPayload);
         
-        if (saltResponse.IsSuccessStatusCode)
-        {
-            _message = $"Error retrieving details: {await saltResponse.Content.ReadAsStringAsync()}. ";
-            return "";
-        }
         if (saltResponse.StatusCode == HttpStatusCode.TooManyRequests)
         {
             _message = "Too many requests. Please try again later. ";
+            return "";
+        }
+        if (!saltResponse.IsSuccessStatusCode)
+        {
+            _message = $"Error retrieving details: {await saltResponse.Content.ReadAsStringAsync()}. ";
             return "";
         }
         
