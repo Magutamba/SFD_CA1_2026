@@ -1,17 +1,17 @@
 //@author Moïse
 //namespace for grouping services components together
-namespace SecureVotingApp.Client.Services;
+namespace SecureVotingApp.Components.Services;
 
 //store information about the credential state of the current voting session
 public class CredentialService
-{   
+{
     //server
     private readonly CredentialSigner credentialSigner;
     //state store to persist credential issued per user session
     private readonly CredentialStateStore stateStore;
 
     //constructor to inject the state store dependency
-    public CredentialService(CredentialSigner credentialSigner,CredentialStateStore stateStore)
+    public CredentialService(CredentialSigner credentialSigner, CredentialStateStore stateStore)
     {
         this.credentialSigner = credentialSigner;
         this.stateStore = stateStore;
@@ -19,28 +19,34 @@ public class CredentialService
 
     //validates the credential request and issues aa signed blinded credential if the user is eligible
     public Task<CredentialResponse> IssueAsync(
-        string userId,string electionId, CredentialRequest request)
+        string userId, string electionId, CredentialRequest request)
     {
-        
-    
-    //prevent the same user receiving two credentials for the same election
-    if (stateStore.HasBeenCredentialed(electionId)){
-        throw new InvalidOperationException(
-            "A credential has already been issued for this election."
-            );
-    }
 
-    //mark credential as issued for this useer
-    stateStore.MarkIssued(userId,electionId);
 
-    //sign request.BlindCredential using the server private signing key managed
-    string signedValue = SignBlindedCredential(request.BlindedCredential);
+        //prevent the same user receiving two credentials for the same election
+        if (stateStore.HasBeenCredentialed(electionId))
+        {
+            throw new InvalidOperationException(
+                "A credential has already been issued for this election."
+                );
+        }
 
-    return Task.FromResult(new CredentialResponse
-    {
-        ElectionId = electionId,
-        SignedBlindedCredential = signedValue
-    });
+        //sign the blinded credential using the server private signing key
+        string signedBlindedCredential = BlindSigner(request.BlindedCredential);
+
+        //mark credential as issued for this useer
+        stateStore.MarkIssued(userId, electionId);
+
+        //sign request.BlindCredential using the server private signing key managed
+        string signedValue = SignBlindedCredential(request.BlindedCredential);
+
+        return Task.FromResult(new CredentialResponse
+        {
+            ElectionId = electionId,
+            SignedBlindedCredential = signedValue,
+            Choices = "Yes,No other ballot is spoiled"
+        });
+
     }
 
     //cryptographic execution of RSA blind signing

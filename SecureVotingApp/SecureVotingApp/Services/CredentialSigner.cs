@@ -14,7 +14,7 @@ using Org.BouncyCastle.Math;
 using Org.BouncyCastle.OpenSsl;
 
 //namespace for grouping services components together
-namespace SecureVotingApp.Client.Services;
+namespace SecureVotingApp.Components.Services;
 
 //performs the server side signing of a blinded credential using RSA blind signature
 public class CredentialSigner

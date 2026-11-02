@@ -4,9 +4,9 @@ using System.ComponentModel.DataAnnotations;
 //logical namespace to group components contracts together prevents class name collisions
 namespace SecureVotingApp.Components.Contracts;
 
-//
+// contract for requesting a vote session with unblinded credential in browser memory to cast a vote anonymously
 
-public class VotingSession
+public class VoteSession
 {
     [Required] 
     //identify the election the voter is voting in
@@ -15,14 +15,7 @@ public class VotingSession
     //anonymous signed blindend credential issued by server after checking voter is logged in and hasn't voted
     [Required]
     public string AnonymousCredential {get;set;} =string.Empty;
-
-    [Required]
-    //is eligible to vote
-    public string isEligible {get;set;} = string.Empty;
-
-    //token to prevent double voting
-    public string AsVotedToke {get;set;} = string.Empty;
-    //the vote cast by the voter
+    //vote cast by the voter
     [Required]
     public string VoteChoice {get;set;} 
 

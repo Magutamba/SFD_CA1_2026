@@ -1,6 +1,6 @@
 //@author Moïse
 //namespace for grouping services components together
-namespace SecureVotingApp.Client.Services;
+namespace SecureVotingApp.Components.Services;
 
 // state store to keep track of credential state during vote session
 public class CredentialStateStore
