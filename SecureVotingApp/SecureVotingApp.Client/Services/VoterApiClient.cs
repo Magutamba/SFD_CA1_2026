@@ -76,48 +76,53 @@ public class VoterApiClient
 
     }
 
-    // //method for submitting vote to the server using anonymous signed credentials, electionId and asVoted
-    // public async Task<VoteReceipt> SubmitVoteAsync(
-    //     VotingSession session,
-    //     string candidateName,
-    //     string voteChoice)
-    // {
-    //     //POST request target votes endpoint
-    //     //using  var ensures memory and headers are automatically disposed once executed
-    //     using var request = new HttpRequestMessage(
-    //         HttpMethod.Post,
-    //         $"api/votes");
+    //method for submitting vote to the server using anonymous signed credentials, electionId and asVoted
+    public async Task<VoteReceipt> SubmitVoteAsync(
+        VotingSession session,
+        string voteChoice)
+    {
 
-    //     //login cookie not needed for submission of vote
-    //     request.SetBrowserRequestCredentials(
-    //         BrowserRequestCredentials.Omit
-    //     );
-
-    //     //wrap signed credential, electionId, Candidate choice, vote choice, as voted token/expiry in AnonymousVoteSubmit object and serialize to JSON request body
-    //     request.Content = JsonContent.Create(
-    //         new AnonymousVoteSubmit
-    //         {
-    //             ElectionId = session.ElectionId,
-    //             SignedBlindedCredential = session.SignedBlindedCredential,
-    //             Candidate = CandidateName,
-    //             //will choose later between candidate and yes/no token or expiry
-    //             VoteChoice = VoteChoice,
-    //             ExpiresAt = session.ExpiresAt,
-    //             AsVotedToken = session.AsVotedToken
-    //         }
-
-    //     );
-
-    //     //send the request to the server and wait for the response containin vote receipt
-    //     using HttpResponseMessage response = await httpClient.SendAsync(request);
-    //     //ensure the response indicates success
-    //     response.EnsureSuccessStatusCode();
-
-    //     // deserialize the response content to a VoteReceipt object which contains confirmation of vote submission
-    //     return await response.Content.ReadFromJsonAsync<VoteReceipt>()
-    //         ?? throw new InvalidOperationException("The vote response was empty."
-    //         );
+        //server will check if the credential has expired before accepting the vote
+        if(DateTimeOffSet.UtcNow > session.ExpiresAt)
+        {
+            throw new InvalidOperationException(
+                "The voting credential has expired."
+            );
+        }
 
 
-    // }
+        //POST request target votes endpoint
+        //using  var ensures memory and headers are automatically disposed once executed
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"api/votes");
+
+        //login cookie not needed for submission of vote
+        request.SetBrowserRequestCredentials(
+            BrowserRequestCredentials.Omit
+        );
+
+        //wrap signed credential, electionId, Candidate choice, vote choice, as voted token/expiry in AnonymousVoteSubmit object and serialize to JSON request body
+        request.Content = JsonContent.Create(
+            new AnonymousVoteSubmit
+            {
+                ElectionId = session.ElectionId,
+                SignedBlindedCredential = session.AnonymousCredential,
+                VoteChoice = VoteChoice,
+            }
+
+        );
+
+        //send the request to the server and wait for the response containin vote receipt
+        using HttpResponseMessage response = await httpClient.SendAsync(request);
+        //ensure the response indicates success
+        response.EnsureSuccessStatusCode();
+
+        // deserialize the response content to a VoteReceipt object which contains confirmation of vote submission
+        return await response.Content.ReadFromJsonAsync<VoteReceipt>()
+            ?? throw new InvalidOperationException("The vote response was empty."
+            );
+
+
+    }
 }
