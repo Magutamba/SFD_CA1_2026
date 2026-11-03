@@ -28,8 +28,9 @@ public class CredentialController : ControllerBase
         this.credentialService = credentialService;
     }
 
+    //handle post request to issue a signed credential for the voter, FromBody attribute indicates the request body will be deserialized into the CredentialRequest object
     [HttpPost]
-    public IActionResult IssueCredential(string electionId,CredentialRequest request)
+    public async Task<IActionResult> IssueCredential(string electionId,[FromBody]CredentialRequest request)
     {
         //Authorize validate the login cookie
         string ?userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -47,7 +48,7 @@ public class CredentialController : ControllerBase
         }catch(Exception e)
         {
             //return conflict if the user already received a credential for this election
-            return conflict(new {message = e.getMessage()});
+            return conflict(new {message = e.getMessage});
         }
     }
 }

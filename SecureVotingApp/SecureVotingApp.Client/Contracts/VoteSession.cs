@@ -20,5 +20,5 @@ public class VoteSession
     public string VoteChoice {get;set;} 
 
     //the signed credential expires at this time
-    public DateTimeOffSet CredentialExpiresAt {get;set;}
+    public DateTimeOffset CredentialExpiresAt {get;set;}
 }

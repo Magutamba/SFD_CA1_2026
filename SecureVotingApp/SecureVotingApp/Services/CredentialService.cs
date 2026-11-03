@@ -23,13 +23,13 @@ public class CredentialService
     {
 
         //ensure electionId match
-        if(reques.ElectionId != electionId)
+        if(request.ElectionId != electionId)
         {
             throw new InvalidOperationException("The election id does not match");
         }
-        
+
         //prevent the same user receiving two credentials for the same election
-        if (stateStore.HasBeenCredentialed(electionId))
+        if (stateStore.HasBeenCredentialed(userId,electionId))
         {
             throw new InvalidOperationException(
                 "A credential has already been issued for this election."
@@ -39,19 +39,17 @@ public class CredentialService
         //sign the blinded credential using the server private signing key
         string signedBlindedCredential = BlindSigner(request.BlindedCredential);
 
-        //mark credential as issued for this useer
-        stateStore.MarkIssued(userId, electionId);
-
         //sign request.BlindCredential using the server private signing key managed
         string signedValue = SignBlindedCredential(request.BlindedCredential);
 
         //record issuance of credential to prevent double voting after signing
-        stateSotre.MarkIssued(userId, electionId);
+        stateStore.MarkIssued(userId, electionId);
         return Task.FromResult(new CredentialResponse
         {
             ElectionId = electionId,
             SignedBlindedCredential = signedValue,
-            Choices = "Yes,No other ballot is spoiled"
+            Choices = new List<string> {"Yes", "No"},
+            CredentialExpiresAt = DateTimeOffset.UtcNow.AddHours(1);
         });
 
     }

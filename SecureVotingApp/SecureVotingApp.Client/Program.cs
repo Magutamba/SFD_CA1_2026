@@ -6,12 +6,14 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
-// register the BlindCredential service with the dependency injection container
-builder.Services.AddScoped<IBlindCredential,BlindCredential>();
+
+//@author Moïse register the BlindCredential service with the dependency injection container
+builder.Services.AddScoped<IBlindCredential,BlindCredentialClient>();
 
 
-//registers the HTTP API client service for calling Voter API endpoints
+// @author Moïse register the BlindCredential service with the dependency injection containerregisters the HTTP API client service for calling Voter API endpoints
 builder.Services.AddScoped<VoterApiClient>();
+
 // Orchestrates the two-phase voting protocol: requesting credentials via authenticated endpoints
 // and submitting anonymous votes via unauthenticated endpoints.
 await builder.Build().RunAsync();

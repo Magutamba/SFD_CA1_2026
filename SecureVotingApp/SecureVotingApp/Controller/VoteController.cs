@@ -15,11 +15,15 @@ public class VoteController : ControllerBase
     //handle post request to submit ballot
     [HttpPost]
     public IActionResult SubmitVote(AnonymousVoteSubmit request)
-    {
+    {   
+        //implementation for submitting the vote to the server, validating the anonymous credential, and recording the vote in the election database
+        //temporary
         //validate the request model
-        return Ok(new
+        return Ok(new VoteReceipt
         {
-            status = "Accepted"
+           ElectionId = request.ElectionId,
+           ReceiptId = Guid.NewGuid().ToString(),
+           ConfirmationMessage = "Your vote has been successfully submitted."
         });
     }
 }

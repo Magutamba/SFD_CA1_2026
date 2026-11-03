@@ -9,5 +9,5 @@ public interface IBlindCredentialClient
     BlindCredentialRequest CreateBlindedCredential(string electionId);
 
     //remove the blinding from the signed credential
-    string unblindCredential(string signedBlindedCredential, BlindState state);
+    string UnblindCredential(string signedBlindedCredential, BlindState state);
 }

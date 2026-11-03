@@ -9,110 +9,84 @@
 
 <PageTitle>Vote</PageTitle>
 
-<h1>Vote</h1>
-<div class"container mt-4"></div>
-<p>Request Credentials to vote</p>
-<!-- Display the election the voter is participating in -->
 
-<p>
-    <strong>Election Id</strong> @ElectionId
-</p>
+<div class="container mt-4"></div>
+        <p>
+            <strong>Election Id</strong> @ElectionId
+        </p>
 
-<!--show the credential request button before session starts --->
+        <!-- Display the election the voter is participating in -->
 
-@if(votingSession == null)
-{
-   <button class="btn btn-primary"
-         @onClick={RequestCredentials}
-         disabled="@isLoading">
-          @(isLoading ? "Requesting credentials..." : "Request Credentials")
-    </button>
-}
+        <!--show the credential request button before session starts --->
 
-<div>
-    <button class="btn btn-primary" @onClick={RequestCredentials}>Request Credentials</button>
-</div><!-- show the voting form after session
-@if(votingSession!=null && receipt == null)
-{
-    <hr />
-    <h3> Voting Credential Issued</h3>
-    <p> Your credential as been issued.</p>
+        @if(votingSession == null)
+        {
+            <!-- request credentials before allowing vote -->
+            <p>Request Credentials to vote</p>
+            <button class="btn btn-primary"
+                    @onClick={RequestCredentials}
+                    disabled="@isLoading">
+                    @(isLoading ? "Requesting credentials..." : "Request Credentials")
+            </button>
+        }
+        else if( receipt == null)
+        {
+            <hr />
+            <h3> Voting Credential Issued</h3>
+            <p> Your credential as been issued.</p>
 
-    <!-- display credential expiry time-->
-    <p>
-        <strong> Credential Expiry:</strong>@votingSession.ExpireAt.ToLocalTime()
-    </p>
-}
+            <!-- display credential expiry time-->
+            <p>
+                <strong> Credential Expiry:</strong>@votingSession.ExpireAt.ToLocalTime().ToString("H:mm")
+            </p>
+        }
+
+        <div>
+            <button class="btn btn-primary" @onClick={RequestCredentials}>Request Credentials</button>
+        </div><!-- show the voting form after session
+        @if(votingSession!=null && receipt == null)
+        {
+            <hr />
+            <h3> Voting Credential Issued</h3>
+            <p> Your credential as been issued.</p>
+
+            <!-- display credential expiry time-->
+            <p>
+                <strong> Credential Expiry:</strong>@votingSession.ExpireAt.ToLocalTime()
+            </p>
+
+            <h3> Cast your ballot</h3>
+
+            <div class="form-group">
+                <label for="voteChoice">Enter your choice:</label>
+                <input 
+                    id="voteChoice"
+                    type="text"
+                    @bind="voteChoice"
+                    placeholder="Enter yes, no, anything else will be considered as a spoiled ballot"
+                />
+
+            </div>
+
+            <!-- submite anonymous credential and vote -->
+            <button class="btn btn-success"
+                    @onClick={SubmitVote}
+                    disabled="@isLoading">
+                    @(isLoading ? "Submitting vote..." : "Submit Vote")
+            </button>
+
+        }
+
+        <!-- display vote receipt for successful submission -->
+        @if (receipt !=null)
+        {
+            
+        }
+
 </div>
 @code {
     private async Task RequestCredentials()
     {
         
     }
-}
-@page "/weather"
-
-<PageTitle>Weather</PageTitle>
-
-<h1>Weather</h1>
-
-<p>This component demonstrates showing data.</p>
-
-@if (forecasts == null)
-{
-    <p>
-        <em>Loading...</em>
-    </p>
-}
-else
-{
-    <table class="table">
-        <thead>
-        <tr>
-            <th>Date</th>
-            <th aria-label="Temperature in Celsius">Temp. (C)</th>
-            <th aria-label="Temperature in Fahrenheit">Temp. (F)</th>
-            <th>Summary</th>
-        </tr>
-        </thead>
-        <tbody>
-        @foreach (var forecast in forecasts)
-        {
-            <tr>
-                <td>@forecast.Date.ToShortDateString()</td>
-                <td>@forecast.TemperatureC</td>
-                <td>@forecast.TemperatureF</td>
-                <td>@forecast.Summary</td>
-            </tr>
-        }
-        </tbody>
-    </table>
-}
-
-@code {
-    private WeatherForecast[]? forecasts;
-
-    protected override async Task OnInitializedAsync()
-    {
-        // Simulate asynchronous loading to demonstrate a loading indicator
-        await Task.Delay(500);
-
-        var startDate = DateOnly.FromDateTime(DateTime.Now);
-        var summaries = new[] { "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching" };
-        forecasts = Enumerable.Range(1, 5).Select(index => new WeatherForecast
-        {
-            Date = startDate.AddDays(index),
-            TemperatureC = Random.Shared.Next(-20, 55),
-            Summary = summaries[Random.Shared.Next(summaries.Length)]
-        }).ToArray();
-    }
-
-    private class WeatherForecast
-    {
-        public DateOnly Date { get; set; }
-        public int TemperatureC { get; set; }
-        public string? Summary { get; set; }
-        public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-    }
-
 }

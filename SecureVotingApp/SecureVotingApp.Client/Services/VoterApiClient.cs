@@ -26,7 +26,7 @@ public class VoterApiClient
     }
 
     //method for requesting credentials and ballot from the server for voter to cast their vote
-    public async Task<VotingSession> RequestBallotAsync(string electionId)
+    public async Task<VoteSession> RequestBallotAsync(string electionId)
     {
         //genereate a random credential and blind it in client
         BlindCredentialRequest blindRequest = blindVoterClient.CreateBlindedCredential(electionId);
@@ -69,21 +69,20 @@ public class VoterApiClient
         {
             ElectionId = credentialResponse.ElectionId,
             AnonymousCredential = anonymousCredential,
-            VoteChoice = credentialResponse.VoteChoice,
-            ExpiresAt = credentialResponse.ExpiresAt, //choice between token or expiry will be made later
-            AsVotedToken = credentialResponse.AsVotedToken
+            VoteChoice = string.Empty,
+            CredentialExpiresAt = credentialResponse.CredentialExpiresAt,
         };
 
     }
 
     //method for submitting vote to the server using anonymous signed credentials, electionId and asVoted
     public async Task<VoteReceipt> SubmitVoteAsync(
-        VotingSession session,
+        VoteSession session,
         string voteChoice)
     {
 
         //server will check if the credential has expired before accepting the vote
-        if(DateTimeOffSet.UtcNow > session.ExpiresAt)
+        if(DateTimeOffset.UtcNow > session.CredentialExpiresAt)
         {
             throw new InvalidOperationException(
                 "The voting credential has expired."
@@ -107,8 +106,8 @@ public class VoterApiClient
             new AnonymousVoteSubmit
             {
                 ElectionId = session.ElectionId,
-                SignedBlindedCredential = session.AnonymousCredential,
-                VoteChoice = VoteChoice,
+                AnonymousCredential = session.AnonymousCredential,
+                VoteChoice = voteChoice,
             }
 
         );
@@ -119,12 +118,12 @@ public class VoterApiClient
         response.EnsureSuccessStatusCode();
 
         // deserialize the response content to a VoteReceipt object which contains confirmation of vote submission
-        VoteReceipt = await response.Content.ReadFromJsonAsync<VoteReceipt>()
+        VoteReceipt voteReceipt = await response.Content.ReadFromJsonAsync<VoteReceipt>()
             ?? throw new InvalidOperationException("The vote response was empty."
             );
 
         //return confirmation of accepted vote 
-        return receipt;
+        return voteReceipt;
 
     }
 }

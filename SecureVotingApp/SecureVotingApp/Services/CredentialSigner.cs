@@ -31,7 +31,7 @@ public class CredentialSigner
 
         //parse the keyobject from the PEM file
         object keyObject = pemReader.ReadObject()
-            ?? throw new InvaliOperationException(
+            ?? throw new InvalidOperationException(
                 "The private key could not be loaded."
             );
         //convert the keyObject to Rsa private key parametre
@@ -52,6 +52,9 @@ public class CredentialSigner
     //sign blinded credential using the RSA private key and return it to the client
     public string SignBlindedCredential(string blindedCredential)
     {
+        //decode the base64 url encoded blinded credential into a byte array
+        byte[] blindedBytes = Base64UrlDecoder(blindedCredential);
+
         //decode the bytes as a positive RSA integer
         var blindNum = new BigInteger(1, blindedBytes);
 
@@ -63,7 +66,7 @@ public class CredentialSigner
             );
         }
 
-        //perform RSA signed blinding operation
+        //perform RSA signed blinding operation 
         var signedBlindNum = blindNum.ModPow(privateKey.Exponent, privateKey.Modulus);
 
         //convert the signed value to a fixed RSA byte array
@@ -77,7 +80,7 @@ public class CredentialSigner
         byte[] fixedLenSigned = new byte[modulusLen];
 
         //left pad the signed value with zeros if it is shorter than the modulus length
-        buffer.BlockCopy(signedBytes, 0, fixedLenSigned, modulusLen - signedBytes.Length, signedBytes.Length);
+        Buffer.BlockCopy(signedBytes, 0, fixedLenSigned, modulusLen - signedBytes.Length, signedBytes.Length);
 
         //return a signed blind credential to the client
         return Base64UrlEncoder.Encode(fixedLenSigned);
@@ -91,7 +94,7 @@ public class CredentialSigner
         string padded = data.Replace('-', '+').Replace('_', '/');
 
         //pad the string with '-' character so its a mutliple of 4
-        padded += new string('-', 4 - padded.Length % 4);
+        padded += new string('=', (4 - padded.Length % 4) % 4);
 
         return Convert.FromBase64String(padded);
     }
@@ -100,7 +103,7 @@ public class CredentialSigner
     private static string Base64UrlEncoder(string data)
     {
         //replace url safe characters into standar base64 characters
-        return Convert.ToBase64String(data).Replace('+', '-').Replace('/', '_').TrimEnd('-');
+        return Convert.ToBase64String(data).Replace('+', '-').Replace('/', '_').TrimEnd('=');
 
     }
 }
