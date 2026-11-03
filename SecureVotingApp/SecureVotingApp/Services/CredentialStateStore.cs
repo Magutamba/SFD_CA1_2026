@@ -3,11 +3,15 @@
 namespace SecureVotingApp.Services;
 
 // state store to keep track of credential state during vote session
-//temporary replace with database SQLlite
 public class CredentialStateStore
 {
-    //temporary in-memory store to track issued credentials per voter session
-    private readonly HashSet<string> issuedCredentials = new ();
+    //store issued credentials to prevent doubl voting
+    private readonly AppDbContext dbContext;
+
+    public CredentialStateStore(AppDbContext dbContext)
+    {
+        this.dbContext = dbContext;
+    }
 
     //check if voter has already been issued a credential for the given election 
     public bool HasBeenCredentialed(string userId,string electionId)
