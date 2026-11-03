@@ -40,7 +40,7 @@ builder.Services.AddCascadingAuthenticationState(); // Shared authentication sta
 //@author Moïse add singleton service for signing credentials with RSA private key, PEM file path included
 builder.Services.AddSingleton<CredentialSigner>(_ => new CredentialSigner("Keys/voting_signing_key.pem"));
 //@author Moïse register state with state store to track issued credentials per voter session
-builder.Services.AddSingleton<CredentialStateStore>();
+//builder.Services.AddSingleton<CredentialStateStore>();
 //@author Moïse 
 builder.Services.AddScoped<CredentialService>();
 
