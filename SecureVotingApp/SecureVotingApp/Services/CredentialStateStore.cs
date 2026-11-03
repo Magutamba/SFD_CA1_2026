@@ -1,6 +1,6 @@
 //@author Moïse
 //namespace for grouping services components together
-namespace SecureVotingApp.Components.Services;
+namespace SecureVotingApp.Services;
 
 // state store to keep track of credential state during vote session
 //temporary replace with database SQLlite

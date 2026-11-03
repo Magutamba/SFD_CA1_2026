@@ -14,7 +14,7 @@ builder.Services.AddSingleton<CredentialSigner>(_ => new CredentialSigner("Keys/
 //@author Moïse register state with state store to track issued credentials per voter session
 builder.Services.AddSingleton<CredentialStateStore>();
 //@author Moïse 
-builder.Services.AddScoped<CredentialService>(CredentialService());
+builder.Services.AddScoped<CredentialService>();
 
 
 

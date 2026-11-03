@@ -1,9 +1,9 @@
 @page "/vote/{ElectionId}"
 <!-- @author Moïse *-->
 
-<!--et the Contracts and Services*-->
-@using SecureVotingApp.Components.Contracts
-@using SecureVotingApp.Components.Services
+<!--get the Contracts and Services*-->
+@using SecureVotingApp.Client.Contracts
+@using SecureVotingApp.Client.Services
 
 @inject VoterApiClient VoterApiClient
 
@@ -24,7 +24,7 @@
             <!-- request credentials before allowing vote -->
             <p>Request Credentials to vote</p>
             <button class="btn btn-primary"
-                    @onClick={RequestCredentials}
+                    @onclick="RequestCredentials"
                     disabled="@isLoading">
                     @(isLoading ? "Requesting credentials..." : "Request Credentials")
             </button>
@@ -37,22 +37,7 @@
 
             <!-- display credential expiry time-->
             <p>
-                <strong> Credential Expiry:</strong>@votingSession.ExpireAt.ToLocalTime().ToString("H:mm")
-            </p>
-        }
-
-        <div>
-            <button class="btn btn-primary" @onClick={RequestCredentials}>Request Credentials</button>
-        </div><!-- show the voting form after session
-        @if(votingSession!=null && receipt == null)
-        {
-            <hr />
-            <h3> Voting Credential Issued</h3>
-            <p> Your credential as been issued.</p>
-
-            <!-- display credential expiry time-->
-            <p>
-                <strong> Credential Expiry:</strong>@votingSession.ExpireAt.ToLocalTime()
+                <strong> Credential Expiry:</strong>@voteSession.CredentialExpiresAt.ToLocalTime().ToString("H:mm")
             </p>
 
             <h3> Cast your ballot</h3>
@@ -70,8 +55,8 @@
 
             <!-- submite anonymous credential and vote -->
             <button class="btn btn-success"
-                    @onClick={SubmitVote}
-                    disabled="@isLoading">
+                    @onclick="SubmitVote" 
+                    disabled="@isLoading || string.IsNullOrEmpty(voteChoice)">
                     @(isLoading ? "Submitting vote..." : "Submit Vote")
             </button>
 
@@ -110,7 +95,7 @@
     //store the receipt returned from the server after submission
     private VoteReceipt? receipt;
     //store user vote
-    private string VoteChoice = string.Empty;
+    private string voteChoice = string.Empty;
 
     //control loading state for async operations
     private bool isLoading =false;
@@ -142,13 +127,16 @@
     //submit anonymous credential and vote to the server
     private async Task SubmitVote()
     {
+        //ensure  credential exist before submission
+        if(voteSession == null)
+            return;
         try
         {
             isLoading = true;
             errorMessage = string.Empty;
 
             //call api client to submit the vote
-            receipt = await VoterApiClient.SubmitVoteAsync(votingSession, VoteChoice);
+            receipt = await VoterApiClient.SubmitVoteAsync(voteSession, voteChoice.Trim());
         }
         catch (Exception ex)
         {

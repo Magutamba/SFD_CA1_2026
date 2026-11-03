@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-namespace SecureVotingApp.Components.Contracts;
+namespace SecureVotingApp.Client.Contracts;
 public class RegisterRequest
 {
     [Required] [EmailAddress] public string Email { get; set; } = string.Empty;

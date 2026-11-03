@@ -6,8 +6,11 @@ using Microsoft.AspNetCore.Authorization;
 //provides access to identity claims to retrieve the logged in userId
 using System.Security.Claims;
 //import the custom contract for credential request and response
-using SecureVotingApp.Components.Contracts;
+using SecureVotingApp.Contracts;
+//namespace for grouping services components together
+namespace SecureVotingApp.Controllers;
 //designates class as Api controller automatical model validation and Http response behaviours
+
 [ApiController]
 
 //restricts access to authenticated users only

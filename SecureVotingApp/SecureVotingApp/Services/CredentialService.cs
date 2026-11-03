@@ -1,6 +1,6 @@
 //@author Moïse
 //namespace for grouping services components together
-namespace SecureVotingApp.Components.Services;
+namespace SecureVotingApp.Services;
 
 //store information about the credential state of the current voting session
 public class CredentialService
@@ -49,7 +49,7 @@ public class CredentialService
             ElectionId = electionId,
             SignedBlindedCredential = signedValue,
             Choices = new List<string> {"Yes", "No"},
-            CredentialExpiresAt = DateTimeOffset.UtcNow.AddHours(1);
+            CredentialExpiresAt = DateTimeOffset.UtcNow.AddHours(1)
         });
 
     }

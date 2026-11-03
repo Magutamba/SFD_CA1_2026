@@ -2,8 +2,7 @@
 //import data annotations for validation e.g Required, EmailAddress, MinLength
 using System.ComponentModel.DataAnnotations;
 //logical namespace to group components contracts together prevents class name collisions
-namespace SecureVotingApp.Components.Contracts;
-
+namespace SecureVotingApp.Client.Contracts;
 //contract for requesting ballot and credentials from server in order to vote
 public class CredentialRequest
 {  [Required] 

@@ -1,5 +1,8 @@
 //@author Moïse
 
+//namespace for grouping services components together
+namespace SecureVotingApp.Controllers;
+
 //designates class as Api controller automatical model validation and Http response behaviours
 [ApiController]
 
