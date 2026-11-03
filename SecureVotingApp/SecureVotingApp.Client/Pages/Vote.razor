@@ -99,9 +99,64 @@
 
 </div>
 
-@code {
+@code{
+    //election id obtained from the route parameter in url
+    [Parameter]
+    public string ElectionId {get;set;} = string.Empty;
+
+    //anonymous anonymous credential in memory
+    private VoteSession? voteSession;
+
+    //store the receipt returned from the server after submission
+    private VoteReceipt? receipt;
+    //store user vote
+    private string VoteChoice = string.Empty;
+
+    //control loading state for async operations
+    private bool isLoading =false;
+
+    //store error message for display
+    private string errorMessage = string.Empty;
+
+    //request and receive anonymous signed voting credentials 
     private async Task RequestCredentials()
     {
-        
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            //call api client to request and unblind the credentials from the server
+            voteSession = await VoterApiClient.RequestBallotAsync(ElectionId);
+        }
+        catch (Exception ex)
+        {
+            errorMessage =ex.Message;
+
+        }finally
+        {
+            isLoading = false;
+        }
+    }
+
+    //submit anonymous credential and vote to the server
+    private async Task SubmitVote()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            //call api client to submit the vote
+            receipt = await VoterApiClient.SubmitVoteAsync(votingSession, VoteChoice);
+        }
+        catch (Exception ex)
+        {
+            errorMessage =ex.Message;
+
+        }finally
+        {
+            isLoading = false;
+        }
     }
 }

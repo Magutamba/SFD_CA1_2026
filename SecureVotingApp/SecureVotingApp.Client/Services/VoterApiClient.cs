@@ -64,8 +64,8 @@ public class VoterApiClient
             credentialResponse.SignedBlindedCredential,
             blindRequest.State
         );
-        //return a VotingSession object containin electionId, signed credential 
-        return new VotingSession
+        //return a Vote Session object containin electionId, signed credential 
+        return new VoteSession
         {
             ElectionId = credentialResponse.ElectionId,
             AnonymousCredential = anonymousCredential,
