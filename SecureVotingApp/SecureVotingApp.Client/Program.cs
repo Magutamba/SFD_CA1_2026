@@ -8,7 +8,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
 //@author Moïse register the BlindCredential service with the dependency injection container
-builder.Services.AddScoped<IBlindCredential,BlindCredentialClient>();
+builder.Services.AddScoped<IBlindCredentialClient,BlindCredentialClient>();
 
 
 // @author Moïse register the BlindCredential service with the dependency injection containerregisters the HTTP API client service for calling Voter API endpoints
