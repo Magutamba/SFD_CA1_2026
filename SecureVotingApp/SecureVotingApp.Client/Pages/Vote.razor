@@ -10,7 +10,7 @@
 <PageTitle>Vote</PageTitle>
 
 
-<div class="container mt-4"></div>
+<div class="container mt-4">
         <p>
             <strong>Election Id</strong> @ElectionId
         </p>
@@ -80,10 +80,25 @@
         <!-- display vote receipt for successful submission -->
         @if (receipt !=null)
         {
+            <hr />
+            <h3>Vote Submitted</h3>
+            <p>@receipt.ConfirmationMessage</p>
+
+            <p>
+                <strong>Receipt ID: </strong>@receipt.ReceiptId
+            </p>
+        }
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                    @errorMessage
+            </div>
             
         }
 
 </div>
+
 @code {
     private async Task RequestCredentials()
     {
