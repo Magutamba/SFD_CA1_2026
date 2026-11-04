@@ -76,7 +76,7 @@ public class BlindCredentialClient : IBlindCredentialClient
 
         // * FIXED: use the blinded number created above.
         byte[] blindedBytes = blindedNum.ToByteArrayUnsigned();
-
+        //
         byte[] fixedLenBlinded = new byte[k];
 
         Buffer.BlockCopy(blindedBytes,0, fixedLenBlinded, k - blindedBytes.Length, blindedBytes.Length);
