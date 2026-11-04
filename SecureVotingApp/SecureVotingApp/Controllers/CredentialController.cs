@@ -12,6 +12,7 @@ using System.Security.Claims;
 using SecureVotingApp.Client.Contracts;//might need to change to a shared contract folder
 //
 using SecureVotingApp.Services;
+using Microsoft.AspNetCore.RateLimiting;
 
 //namespace for grouping services components together
 namespace SecureVotingApp.Controllers;
@@ -22,7 +23,7 @@ namespace SecureVotingApp.Controllers;
 
 //restricts access to authenticated users only
 [Authorize]
-
+[EnableRateLimiting("StandardPolicy")]
 //route for the controller 
 [Route("api/elections/{electionId}/credential")]
 

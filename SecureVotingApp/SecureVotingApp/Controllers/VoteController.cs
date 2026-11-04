@@ -29,7 +29,7 @@ using SecureVotingApp.Models;
 using SecureVotingApp.Client.Contracts;
 using SecureVotingApp.Services;
 using Microsoft.AspNetCore.Authorization;
-
+using Microsoft.AspNetCore.RateLimiting;
 
 //namespace for grouping services components together
 namespace SecureVotingApp.Controllers;
@@ -39,7 +39,7 @@ namespace SecureVotingApp.Controllers;
 
 //allow anonymous access to the controller, so voter can submit ballot anonymously
 [AllowAnonymous]
-
+[EnableRateLimiting("StrictPolicy")]
 //route for the votecontroller 
 [Route("api/votes")]
 
