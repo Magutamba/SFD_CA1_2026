@@ -1,18 +1,12 @@
 //@author Moïse
 // directive for core fundamental types and base classes
 using System;
-//directives for character encoding and decoding
-using System.Text;
-// directives to use for using collections and lists
-using System.Collections.Generic;
 //directives to use cryptographic primitives such as SHA384 and RSA
 using System.Security.Cryptography;
 //directives to support asynchronous programming and tasks
 using System.Threading.Tasks;
 //interface and classes for cryptographic algorithms in BouncyCastle RSA
 using Org.BouncyCastle.Crypto;
-//low level cipher engine for RSA RsaEngines
-using Org.BouncyCastle.Crypto.Engines;
 //cryptographic key parameter for RSA orivate key
 using Org.BouncyCastle.Crypto.Parameters;
 //BigInteger class for RSA arithmetic
@@ -149,8 +143,9 @@ public class VoteController : ControllerBase
         {
             try
             {   
+                //retrieve the server RSA public key parameters(Modulus N and exponent e) from the credential signer
                 RsaKeyParameters publicKey = credentialSigner.GetPublicKey();
-                // s is 
+                // converts the raw signature bytes into a positive BigInteger scalar s for modular arithmetic
                 var s = new BigInteger(1, signatureBytes);
 
                 //reject signature integers out of RSA
@@ -162,11 +157,14 @@ public class VoteController : ControllerBase
                 BigInteger m = s.ModPow(publicKey.Exponent, publicKey.Modulus);
                 //convert recoverd integer back to fixed octet array matching the RSA modulus length k
                 int k = (publicKey.Modulus.BitLength + 7 ) / 8;
-                //convert the recovered 
-                t
+                //convert the recovered RSA integer m to an unsigned byte array 
+                byte [] recoveredBytes = m.ToByteArrayUnsigned();
+                //create a fixed length byte array of length k to match the RSA key modulus byte length 
+                byte [] fixedLenRecovered = new byte[k];
                 //left pad the recovered value with zeros if it is shorter than the modulus length
                 Buffer.BlockCopy(recoveredBytes, 0, fixedLenRecovered, k - recoveredBytes.Length, recoveredBytes.Length);
                 
+                //compare the fixed length recovered bytes with the original signature bytes to verify the signature
                 return fixedLenRecovered.Length == k;
 
 
