@@ -14,6 +14,6 @@ public class IssuedCredential
     public string ElectionId {get;set;} = string.Empty;
 
     //records when the credential was issued
-    public DateTimeOffset IssuedAt {get;set}
+    public DateTimeOffset IssuedAt {get;set;}
     
 }

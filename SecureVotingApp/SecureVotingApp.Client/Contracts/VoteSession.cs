@@ -17,7 +17,8 @@ public class VoteSession
     public string AnonymousCredential {get;set;} =string.Empty;
     //vote cast by the voter
     [Required]
-    public string VoteChoice {get;set;} 
+    // * FIXED: initialize the value to satisfy nullable analysis.
+    public string VoteChoice {get;set;} = string.Empty;
 
     //the signed credential expires at this time
     public DateTimeOffset CredentialExpiresAt {get;set;}

@@ -4,6 +4,8 @@
 using System.Net.Http.Json;
 //imports types for HTTP requests specific for Blazor WebAssembly apps, including extension methods for sending and receiving JSON data
 using Microsoft.AspNetCore.Components.WebAssembly.Http;
+// * ADDED: imports the client-side request and response contracts.
+using SecureVotingApp.Client.Contracts;
 
 //logical namespace for grouping services components together
 namespace SecureVotingApp.Client.Services;
@@ -29,7 +31,7 @@ public class VoterApiClient
     public async Task<VoteSession> RequestBallotAsync(string electionId)
     {
         //genereate a random credential and blind it in client
-        BlindCredentialRequest blindRequest = blindVoterClient.CreateBlindedCredential(electionId);
+        BlindCredentialRequest blindRequest = await blindVoterClient.CreateBlindedCredentialAsync(electionId);
 
         //send the blinded credential to the server and request a signed credential and ballot
         using var request = new HttpRequestMessage(HttpMethod.Post, $"api/elections/{electionId}/credential");
@@ -59,7 +61,7 @@ public class VoterApiClient
             );
 
         //remove the blinding from the signed credential
-        string anonymousCredential = blindVoterClient.UnblindCredential(
+        string anonymousCredential = await blindVoterClient.UnblindCredentialAsync(
             // pass the signed ballot creddential and blinding state to unblind method and get signed credential for anonimity whilst voting
             credentialResponse.SignedBlindedCredential,
             blindRequest.State

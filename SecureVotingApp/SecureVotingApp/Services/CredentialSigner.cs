@@ -1,6 +1,12 @@
 //@author Moïse
 // classes for converting strings to and from byte arrays 
+//
+using System;
+//
 using System.Text;
+//directive for file reading and writing
+using System.IO;
+
 
 //interface and classes for cryptographic algorithms in BouncyCastle RSA
 using Org.BouncyCastle.Crypto;
@@ -25,6 +31,7 @@ public class CredentialSigner
     // contructor to load the RSA private key from a PEM file
     public CredentialSigner(string privateKeyPath)
     {
+        //
         //load the private key once when in the service
         using var reader = File.OpenText(privateKeyPath);
         var pemReader = new PemReader(reader);
@@ -49,11 +56,25 @@ public class CredentialSigner
         };
     }
 
+    // returns the public key for verification of the signed blinded credential
+    public RsaKeyParameters GetPublicKey()
+    {
+        //return the public key parameters from the private key
+        return new RsaKeyParameters(false, privateKey.Modulus, privateKey.PublicExponent);
+    }
+
     //sign blinded credential using the RSA private key and return it to the client
     public string SignBlindedCredential(string blindedCredential)
     {
         //decode the base64 url encoded blinded credential into a byte array
         byte[] blindedBytes = Base64UrlDecoder(blindedCredential);
+        //compute the modulus length in bytes from RSA private key bit length rounding to nearest byte
+        int modulusLen = (privateKey.Modulus.BitLength + 7) / 8;
+        //ensure blinded octet length equals RSA modulus length to prevent malleability attacks
+        if (blindedBytes.Length != modulusLen)
+        {
+            throw new InvalidOperationException("The blinded credential is out of RSA modulus length");
+        }
 
         //decode the bytes as a positive RSA integer
         var blindNum = new BigInteger(1, blindedBytes);
@@ -66,28 +87,28 @@ public class CredentialSigner
             );
         }
 
-        //perform RSA signed blinding operation 
+        //RFC 9474 signing mathperform RSA signed blinding operation 
         var signedBlindNum = blindNum.ModPow(privateKey.Exponent, privateKey.Modulus);
+        //fixed length byte array same length as RSA modulus
+        byte[] fixedLenSigned = new byte[modulusLen];
 
         //convert the signed value to a fixed RSA byte array
         //1 ensures value is positive regardless of high bit value
-        int modulusLen = (privateKey.Modulus.BitLength + 7) / 8;
+        //int modulusLen = (privateKey.Modulus.BitLength + 7) / 8;
 
         //convert the signed BigInteger to a unsigned byte array to match RSA modulus length
         byte[] signedBytes = signedBlindNum.ToByteArrayUnsigned();
 
-        //fixed length byte array same length as RSA modulus
-        byte[] fixedLenSigned = new byte[modulusLen];
 
         //left pad the signed value with zeros if it is shorter than the modulus length
         Buffer.BlockCopy(signedBytes, 0, fixedLenSigned, modulusLen - signedBytes.Length, signedBytes.Length);
 
         //return a signed blind credential to the client
-        return Base64UrlEncoder.Encode(fixedLenSigned);
+        return Base64UrlEncoder(fixedLenSigned);
 
     }
 
-    //deocodes a  raw base64 string back into a raw byte array for cryptographic operations 
+    //decodes a  raw base64 string back into a raw byte array for cryptographic operations 
     private static byte[] Base64UrlDecoder(string data)
     {
         //replace url safe characters into standar base64 characters
@@ -100,7 +121,7 @@ public class CredentialSigner
     }
 
     //encoded a byte array into a base64 url safe string for safe transmission over HTTP 
-    private static string Base64UrlEncoder(string data)
+    private static string Base64UrlEncoder(byte[] data)
     {
         //replace url safe characters into standar base64 characters
         return Convert.ToBase64String(data).Replace('+', '-').Replace('/', '_').TrimEnd('=');

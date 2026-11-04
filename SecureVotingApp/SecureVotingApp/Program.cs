@@ -36,11 +36,13 @@ builder.Services                //exactly the same as .AddAuthentication("Cookie
 builder.Services.AddCustomRateLimiter();
 
 builder.Services.AddCascadingAuthenticationState(); // Shared authentication state with client (Lorenzo)
-
+//@author Moïse create path for storing RSA private key
+string privateKeyPath = Path.Combine(builder.Environment.ContentRootPath,"Keys", "voting_signing_key.pem");
 //@author Moïse add singleton service for signing credentials with RSA private key, PEM file path included
-builder.Services.AddSingleton<CredentialSigner>(_ => new CredentialSigner("Keys/voting_signing_key.pem"));
-//@author Moïse register state with state store to track issued credentials per voter session
-builder.Services.AddSingleton<CredentialStateStore>();
+//might need to change the path
+builder.Services.AddSingleton<CredentialSigner>(_ => new CredentialSigner(privateKeyPath));
+//@author Moïse db state with state store to track issued credentials per voter session
+builder.Services.AddScoped<CredentialStateStore>();
 //@author Moïse 
 builder.Services.AddScoped<CredentialService>();
 

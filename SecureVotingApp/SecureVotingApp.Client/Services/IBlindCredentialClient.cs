@@ -5,9 +5,10 @@ namespace SecureVotingApp.Client.Services;
 //define the client side Blinding operations
 public interface IBlindCredentialClient
 {
+    // task makes the method asynchronous and allows for non-blocking operations, improving responsiveness in client applications
     //creates a random credential and blinds it in client
-    BlindCredentialRequest CreateBlindedCredential(string electionId);
+    Task<BlindCredentialRequest> CreateBlindedCredentialAsync(string electionId);
 
     //remove the blinding from the signed credential
-    string UnblindCredential(string signedBlindedCredential, BlindState state);
+    Task<string> UnblindCredentialAsync(string signedBlindedCredential, BlindState state);
 }

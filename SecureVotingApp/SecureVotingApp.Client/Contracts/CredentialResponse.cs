@@ -20,6 +20,6 @@ public class CredentialResponse
 
     //the signed credential expires at this time
 
-    public DateTimeOffset CredentialExpiresAt  {get;set;} =string.Empty;
+    public DateTimeOffset CredentialExpiresAt  {get;set;}
 
 }   

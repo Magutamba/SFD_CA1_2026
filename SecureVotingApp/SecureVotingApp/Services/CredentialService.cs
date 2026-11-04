@@ -1,5 +1,13 @@
 //@author Moïse
-//namespace for grouping services components together
+//
+using System;
+//
+using System.Collections.Generic;
+//
+using System.Threading.Tasks;
+// * ADDED: imports the request and response contracts.
+using SecureVotingApp.Client.Contracts;
+//rouping services components together
 namespace SecureVotingApp.Services;
 
 //store information about the credential state of the current voting session
@@ -18,45 +26,50 @@ public class CredentialService
     }
 
     //validates the credential request and issues aa signed blinded credential if the user is eligible
-    public Task<CredentialResponse> IssueAsync(
-        string userId, string electionId, CredentialRequest request)
+    public async Task<CredentialResponse> IssueAsync(
+        int userId, string electionId, CredentialRequest request)
     {
 
+        //if userId is invalid or electionI
+        if(userId<=0)
+        {
+            throw new InvalidOperationException("Invalid userId");
+        }
+
+        if(string.IsNullOrWhiteSpace(electionId))
+        {
+
+            throw new InvalidOperationException("Invalid electionId");
+        }
         //ensure electionId match
         if(request.ElectionId != electionId)
         {
             throw new InvalidOperationException("The election id does not match");
         }
 
-        //prevent the same user receiving two credentials for the same election
-        if (stateStore.HasBeenCredentialed(userId,electionId))
+        if (string.IsNullOrWhiteSpace(request.BlindedCredential))
         {
-            throw new InvalidOperationException(
-                "A credential has already been issued for this election."
-                );
+            throw new InvalidOperationException("Blinded credential is required");
+        }
+
+        //reserve the credential for ths user before signing to prevent conflicts with concurrent requests
+        bool reserved = await stateStore.TryMarkIssuedAsync(userId, electionId);
+        if (!reserved)
+        {
+            throw new InvalidOperationException("Could not reserve credentials");
+
         }
 
         //sign the blinded credential using the server private signing key
-        string signedBlindedCredential = BlindSigner(request.BlindedCredential);
-
-        //sign request.BlindCredential using the server private signing key managed
-        string signedValue = SignBlindedCredential(request.BlindedCredential);
-
-        //record issuance of credential to prevent double voting after signing
-        stateStore.MarkIssued(userId, electionId);
-        return Task.FromResult(new CredentialResponse
+        string signedValue = credentialSigner.SignBlindedCredential(request.BlindedCredential);
+        
+        return new CredentialResponse
         {
             ElectionId = electionId,
             SignedBlindedCredential = signedValue,
             Choices = new List<string> {"Yes", "No"},
             CredentialExpiresAt = DateTimeOffset.UtcNow.AddHours(1)
-        });
+        };
 
-    }
-
-    //cryptographic execution of RSA blind signing
-    private string BlindSigner(string blindedCredential)
-    {
-        string SignedBlindedCredential = credentialSigner.SignBlindedCredential(request.BlindedCredential);
     }
 }

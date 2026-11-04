@@ -62,6 +62,18 @@
 
         }
 
+        @if (IsCredentialExpired)
+        {
+            <p class="text-danger">
+                Your voting credential has expired. Please request a new credential to vote.
+
+            <button class="btn btn-primary"
+                    @onclick="SubmitVote"
+                    disabled="@isLoading || string.isNullOrWhiteSpace(voteChoice) || IsCredentialExpired">
+                    @(isLoading ? "Submitting credentials..." : "Vote Submit")
+            </button>
+            </p>
+        }
         <!-- display vote receipt for successful submission -->
         @if (receipt !=null)
         {
@@ -102,6 +114,9 @@
 
     //store error message for display
     private string errorMessage = string.Empty;
+
+    //check whether anonymous credential as expired
+    private bool IsCredentialExpired => voteSession!=null && DateTimeOffset.UtcNow > voteSession.CredentialExpiresAt;
 
     //request and receive anonymous signed voting credentials 
     private async Task RequestCredentials()

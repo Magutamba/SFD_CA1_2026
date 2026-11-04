@@ -10,12 +10,10 @@ namespace SecureVotingApp.Data;
 public class AppDbContext : DbContext
 {
    public DbSet<User> Users { get; set; } = null!; //DbSet is a generic class provided by EFC(entity framework core) a set of (Users)
-
    //@author Moïse records that a user has already received a credential for the election 
    public DbSet<IssuedCredential> IssuedCredentials => Set<IssuedCredential>();
    //@author Moïse records that an anonymous credential has been used once
-   public DbSet<SpentCredential> SpentCredentials =>Set<spentCredential>();
-
+   public DbSet<SpentCredential> SpentCredentials =>Set<SpentCredential>();
    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)//base passes the argument to the parent
     {
         
@@ -28,7 +26,6 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<User>()
                     .HasIndex(user => user.Email)
                     .IsUnique();
-
         //@author Moïse a user can only receive one credential for the same election
         modelBuilder.Entity<IssuedCredential>()
                     .HasIndex(credential => new
@@ -38,12 +35,12 @@ public class AppDbContext : DbContext
                     })
                     .IsUnique();
 
-        // @author Moïsean anonymous credential can only be spent once during the election
+        // @author Moïse an anonymous credential can only be spent once during the election
         modelBuilder.Entity<SpentCredential>()
                     .HasIndex(credential => new
                     {
                         credential.ElectionId,
-                        credential.credentialHash
+                        credential.CredentialHash
                     })
                     .IsUnique();
                     
