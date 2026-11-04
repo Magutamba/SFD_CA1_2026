@@ -1,3 +1,4 @@
+<!-- @author Lorenzo -->
 @page "/login"
 @rendermode @(new InteractiveWebAssemblyRenderMode(
                 prerender: false))
@@ -10,6 +11,7 @@
 
 <h3>Login Account</h3>
 
+<!--Edit Form used to bind LoginRequest model to form details. Check LoginRequest for property specific data anotations-->
 <EditForm Model="_request" FormName="AccountLogin" OnValidSubmit="LoginAsync">
     <label>Email</label><br/>
     <InputText @bind-Value="_request.Email"/><br/>
