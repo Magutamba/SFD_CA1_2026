@@ -1,0 +1,165 @@
+@page "/vote/{ElectionId}"
+<!-- @author Moïse *-->
+
+<!--get the Contracts and Services*-->
+@using SecureVotingApp.Client.Contracts
+@using SecureVotingApp.Client.Services
+
+@inject VoterApiClient VoterApiClient
+
+<PageTitle>Vote</PageTitle>
+
+
+<div class="container mt-4">
+        <p>
+            <strong>Election Id</strong> @ElectionId
+        </p>
+
+        <!-- Display the election the voter is participating in -->
+
+        <!--show the credential request button before session starts --->
+
+        @if(voteSession == null)
+        {
+            <!-- request credentials before allowing vote -->
+            <p>Request Credentials to vote</p>
+            <button class="btn btn-primary"
+                    @onclick="RequestCredentials"
+                    disabled="@isLoading">
+                    @(isLoading ? "Requesting credentials..." : "Request Credentials")
+            </button>
+        }
+        else if( receipt == null)
+        {
+            <hr />
+            <h3> Voting Credential Issued</h3>
+            <p> Your credential as been issued.</p>
+
+            <!-- display credential expiry time-->
+            <p>
+                <strong> Credential Expiry:</strong>@voteSession.CredentialExpiresAt.ToLocalTime().ToString("H:mm")
+            </p>
+
+            <h3> Cast your ballot</h3>
+
+            <div class="form-group">
+                <label for="voteChoice">Enter your choice:</label>
+                <input 
+                    id="voteChoice"
+                    type="text"
+                    @bind="voteChoice"
+                    placeholder="Enter yes, no, anything else will be considered as a spoiled ballot"
+                />
+
+            </div>
+
+            <!-- submite anonymous credential and vote -->
+            <button class="btn btn-success"
+                    @onclick="SubmitVote" 
+                    disabled="@isLoading || string.IsNullOrEmpty(voteChoice)">
+                    @(isLoading ? "Submitting vote..." : "Submit Vote")
+            </button>
+
+        }
+
+        @if (IsCredentialExpired)
+        {
+            <p class="text-danger">
+                Your voting credential has expired. Please request a new credential to vote.
+
+            <button class="btn btn-primary"
+                    @onclick="SubmitVote"
+                    disabled="@isLoading || string.isNullOrWhiteSpace(voteChoice) || IsCredentialExpired">
+                    @(isLoading ? "Submitting credentials..." : "Vote Submit")
+            </button>
+            </p>
+        }
+        <!-- display vote receipt for successful submission -->
+        @if (receipt !=null)
+        {
+            <hr />
+            <h3>Vote Submitted</h3>
+            <p>@receipt.ConfirmationMessage</p>
+
+            <p>
+                <strong>Receipt ID: </strong>@receipt.ReceiptId
+            </p>
+        }
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                    @errorMessage
+            </div>
+            
+        }
+
+</div>
+
+@code{
+    //election id obtained from the route parameter in url
+    [Parameter]
+    public string ElectionId {get;set;} = string.Empty;
+
+    //anonymous anonymous credential in memory
+    private VoteSession? voteSession;
+
+    //store the receipt returned from the server after submission
+    private VoteReceipt? receipt;
+    //store user vote
+    private string voteChoice = string.Empty;
+
+    //control loading state for async operations
+    private bool isLoading =false;
+
+    //store error message for display
+    private string errorMessage = string.Empty;
+
+    //check whether anonymous credential as expired
+    private bool IsCredentialExpired => voteSession!=null && DateTimeOffset.UtcNow > voteSession.CredentialExpiresAt;
+
+    //request and receive anonymous signed voting credentials 
+    private async Task RequestCredentials()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            //call api client to request and unblind the credentials from the server
+            voteSession = await VoterApiClient.RequestBallotAsync(ElectionId);
+        }
+        catch (Exception ex)
+        {
+            errorMessage =ex.Message;
+
+        }finally
+        {
+            isLoading = false;
+        }
+    }
+
+    //submit anonymous credential and vote to the server
+    private async Task SubmitVote()
+    {
+        //ensure  credential exist before submission
+        if(voteSession == null)
+            return;
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            //call api client to submit the vote
+            receipt = await VoterApiClient.SubmitVoteAsync(voteSession, voteChoice.Trim());
+        }
+        catch (Exception ex)
+        {
+            errorMessage =ex.Message;
+
+        }finally
+        {
+            isLoading = false;
+        }
+    }
+}

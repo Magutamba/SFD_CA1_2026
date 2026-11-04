@@ -1,0 +1,24 @@
+//@author Moïse
+//import data annotations for validation e.g Required, EmailAddress, MinLength
+using System.ComponentModel.DataAnnotations;
+//logical namespace to group components contracts together prevents class name collisions
+namespace SecureVotingApp.Client.Contracts;
+
+//sent when logged in as credentials annd is eligible casts their vote 
+public class AnonymousVoteSubmit
+{
+    
+    [Required] 
+    //identify the election the voter is voting in
+     public string ElectionId {get; set;} = string.Empty;
+     
+    [Required] 
+    //anonymous signed credential issued after
+    // authorises the voter to cast their vote without exposing their identity 
+    public string AnonymousCredential {get;set;} = string.Empty;
+
+    //the vote cast by the voter
+    [Required]
+    public string VoteChoice {get;set;} = string.Empty;
+
+}
