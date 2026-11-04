@@ -10,6 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 //back end (DI) registery (Jeán Walton)
 builder.Services.AddScoped<BcryptService>(); //hashing the argon2 
+builder.Services.AddScoped<TotpService>(); // (Lorenzo) was missing from my build - needed to be readded
+builder.Services.AddDataProtection(); // (Lorenzo) same as above
 //configure which Database (EFC) will use all configurations and passed to the super class of the AppDbContext class
 builder.Services.AddDbContext<AppDbContext>(options =>
 {   
