@@ -18,6 +18,8 @@ public class AppDbContext : DbContext
     {
         
     }
+   //@author Aaron Byrne
+   public DbSet<AnonBallot> AnonBallots => Set<AnonBallot>();
 
     //enforcement that emails must be unique 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -44,6 +46,14 @@ public class AppDbContext : DbContext
                     })
                     .IsUnique();
                     
+        // @author Aaron Byrne
+        // Configuring the AnonBallot storage for the database
+        modelBuilder.Entity<AnonBallot>()
+            .HasKey(ballot => ballot.Id);//Sets the ballot ID as the primary key
+
+        modelBuilder.Entity<AnonBallot>()
+            .Property(ballot => ballot.VoteChoice)
+            .IsRequired();//Ensures that there is a vote therefore vote cannot be null
     }
     
 }
