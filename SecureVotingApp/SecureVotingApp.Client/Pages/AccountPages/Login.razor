@@ -18,6 +18,8 @@
     
     <label>Password</label><br/>
     <InputText type="password" @bind-Value="_request.Password"/><br/>
+    <label>2FA Code</label><br/>
+    <InputText type="password" @bind-Value="_request.Code"/><br/>
     <button type="submit" disabled="@_isSubmitting">Login</button>
     
     <DataAnnotationsValidator/>
@@ -66,7 +68,8 @@
         var userPayload = new UserLogin()
         {
             Email = _request.Email,
-            Argon2Hash = argon2Hash
+            Argon2Hash = argon2Hash,
+            Code = _request.Code
         };
         
         using var response = await Http.PostAsJsonAsync(
