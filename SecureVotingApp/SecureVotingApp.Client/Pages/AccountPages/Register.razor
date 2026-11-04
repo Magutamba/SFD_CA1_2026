@@ -1,3 +1,4 @@
+<!-- @author Lorenzo -->
 @page "/register"
 @rendermode @(new InteractiveWebAssemblyRenderMode(
                 prerender: false))
@@ -6,10 +7,12 @@
 @using System.Text
 @using TopSecret.Cryptography
 @using SecureVotingApp.Components.Contracts
+@using SecureVotingApp.Client.Contracts.AccountContracts
 @inject HttpClient Http
 @inject NavigationManager Navigation
 <h3>Create Account</h3>
 
+<!--Edit Form used to bind RegisterRequest model to form details. Check RegisterRequest for property specific data anotations-->
 <EditForm Model="_request" FormName="AccountRegistration" OnValidSubmit="RegisterAsync">
     <label>Email</label><br/>
     <InputText @bind-Value="_request.Email"/><br/>
@@ -29,10 +32,29 @@
     <p role="status">@_message</p>
 }
 
+@if (_confirmRegistration)
+{
+    <EditForm Model="_confirmRequest" FormName="ConfirmRegistration" OnValidSubmit="">
+        <!--QR Code Information-->
+        <!--Steps to get it ready-->
+        <label>2FA Code:</label><br/>
+        <InputText @bind-Value="_confirmRequest.Code"/><br/>
+        
+        <button type="submit" disabled="@_isSubmitting">Confirm Registration</button>
+        
+        <DataAnnotationsValidator/>
+        <ValidationSummary/>
+    </EditForm>
+}
+
+
+
 @code {
     private readonly RegisterRequest _request = new();
     private string? _message;
     private bool _isSubmitting; // if this value is true - the submit button is disabled
+    private bool _confirmRegistration;
+    private ConfirmRegistrationRequest _confirmRequest = new();
     
     public async Task RegisterAsync()
     {
@@ -72,37 +94,66 @@
 
         if (response.IsSuccessStatusCode)
         {
-            var userPayload = new UserLogin()
+            var totpDetails = await response.Content.ReadFromJsonAsync<TotpDetails>();
+            if (totpDetails is null)
             {
-                Email = _request.Email,
-                Argon2Hash = argon2Hash
-            };
-        
-            using var loginResponse = await Http.PostAsJsonAsync(
-                "api/auth/login",
-                userPayload);
-        
-            _message = loginResponse.IsSuccessStatusCode ? "Login Successful" : response.ReasonPhrase;
-            if (loginResponse.IsSuccessStatusCode || loginResponse.StatusCode == HttpStatusCode.TooManyRequests)
-            {
-                Navigation.NavigateTo("/account", forceLoad: true);
+                _message = "Service Error: Please try again later.";
+                _isSubmitting = true;
+                return;
             }
-            else
-            {
-                _message = $"{await loginResponse.Content.ReadAsStringAsync()}";
-            }
+
+            _confirmRegistration = true;
+            
+            await Login(argon2Hash);
+            Navigation.NavigateTo("/login", forceLoad: true);
         }
         else if (response.StatusCode == HttpStatusCode.TooManyRequests)
         {
             _message = "Too many requests. Please try again later";
         }
+        else if (response.StatusCode is HttpStatusCode.BadRequest or  HttpStatusCode.Conflict)
+        {
+            _message = await response.Content.ReadAsStringAsync();
+        }
         else
         {
-            _message = "Email already in use. Please try a new email";
+            _message = "Service Error: Please try again later.";
         }
         
         CryptographicOperations.ZeroMemory(passwordBytes);
         
         _isSubmitting = false;
+    }
+
+    private async Task ConfirmRegistration()
+    {
+        
+    }
+
+    private async Task Login(string argon2Hash)
+    {
+        var userPayload = new UserLogin()
+        {
+            Email = _request.Email,
+            Argon2Hash = argon2Hash
+        };
+        
+        using var response = await Http.PostAsJsonAsync(
+            "api/auth/login",
+            userPayload);
+
+        if (response.IsSuccessStatusCode)
+        {
+            Navigation.NavigateTo("/account", forceLoad: true);
+        }
+        else if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized)
+        {
+            _message = await response.Content.ReadAsStringAsync();
+        }
+        else
+        {
+            _message = "Service Error: Please try again later.";
+        }
+        
     }
 }
