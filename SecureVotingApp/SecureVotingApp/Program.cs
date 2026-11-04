@@ -29,16 +29,27 @@ builder.Services                //exactly the same as .AddAuthentication("Cookie
         options.SlidingExpiration = false;//disable automatic renewal
     });
 
+
 // Temporarily store pending registrations until TOTP setup is confirmed.(Jeán Walton)
 builder.Services.AddMemoryCache();
 
 // Manage temporary registrations until TOTP enrollment is verified.(Jeán Walton)
 builder.Services.AddSingleton<PendingRegistrationService>();
 
+// Add rate limiting service to build (Lorenzo)
+// Contains strict and standard rules to be associated with API controllers to limit rate at which requests can be sent by client
+// Strict rules are explicitly for anonymous requests - where no user has been authorized (e.g., Login)
+// Standard rules are explicitly for non-anonymous requests - where an authorized user is making requests (e.g.,Voting)
+builder.Services.AddCustomRateLimiter();
+
+builder.Services.AddCascadingAuthenticationState(); // Shared authentication state with client (Lorenzo)
+
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
-    .AddInteractiveWebAssemblyComponents();
+    .AddInteractiveWebAssemblyComponents() // Allows blazor client to render page and keep sensitive information away from server or transmission over network
+    .AddAuthenticationStateSerialization(); // Shared authentication state with client
 
 // Add API Controllers - (Jeán Walton)
 builder.Services.AddControllers();
@@ -69,6 +80,7 @@ app.UseHttpsRedirection();
 
 //cookies (Jeán Walton)
 app.UseAuthentication();//app.Use... adds middleware to the HTTP request pipeline
+app.UseRateLimiter(); // Rate Limiter middleware requires that authentication middleware service is active - must come after to ensure working rate limiter association to IP / Use (Lorenzo)
 app.UseAuthorization();
 
 app.UseAntiforgery();
