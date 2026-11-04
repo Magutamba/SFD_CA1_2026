@@ -1,14 +1,13 @@
 //@author Moïse
 //namespace for grouping services components together
 namespace SecureVotingApp.Services;
-//
+//directives to support asynchronous programming and tasks
 using System.Threading.Tasks;
-//
+// directive to use Entity Framework Core for database operations LINQ, AnyAsync and SaveChangesAsync
 using Microsoft.EntityFrameworkCore;
-//
+//directive to use AppDbContext for database queries and updates
 using SecureVotingApp.Data;
-//
-
+// directive to use the data models for the application
 using SecureVotingApp.Models;
 
 // state store to keep track of credential state during vote session

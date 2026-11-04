@@ -1,8 +1,8 @@
 //@author Moïse
 // classes for converting strings to and from byte arrays 
-//
+// directive for core fundamental types and base classes
 using System;
-//
+//directives for character encoding and decoding
 using System.Text;
 //directive for file reading and writing
 using System.IO;

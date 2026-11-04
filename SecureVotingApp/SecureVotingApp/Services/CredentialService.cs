@@ -1,11 +1,11 @@
 //@author Moïse
-//
+//import data annotations for validation e.g Required, EmailAddress, MinLength
 using System;
-//
+// directives to use for using collections and lists
 using System.Collections.Generic;
-//
+//directives to support asynchronous programming and tasks
 using System.Threading.Tasks;
-// * ADDED: imports the request and response contracts.
+//directives to use the contracts
 using SecureVotingApp.Client.Contracts;
 //rouping services components together
 namespace SecureVotingApp.Services;

@@ -1,13 +1,13 @@
 //@author Moïse
-// classes for converting strings to and from byte arrays 
-using System.Text;
-//
+// directive for core fundamental types and base classes
 using System;
-//
+//directives for character encoding and decoding
+using System.Text;
+// directives to use for using collections and lists
 using System.Collections.Generic;
-//
-//
+//directives to use cryptographic primitives such as SHA384 and RSA
 using System.Security.Cryptography;
+//directives to support asynchronous programming and tasks
 using System.Threading.Tasks;
 //interface and classes for cryptographic algorithms in BouncyCastle RSA
 using Org.BouncyCastle.Crypto;
@@ -19,16 +19,21 @@ using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Math;
 //utility class for converting between byte arrays and BigInteger PEM file parsing
 using Org.BouncyCastle.OpenSsl;
-
+//provides MVC and web API functionality API controller, HTTP request handlers
 using Microsoft.AspNetCore.Mvc;
 
+// directive to use Entity Framework Core for database operations LINQ, AnyAsync and SaveChangesAsync
 using Microsoft.EntityFrameworkCore;
-
+//directive to use AppDbContext for database queries and updates
 using SecureVotingApp.Data;
+// directive to use the data models for the application
 using SecureVotingApp.Models;
+
 using SecureVotingApp.Client.Contracts;
 using SecureVotingApp.Services;
+//provide authorization attributes
 using Microsoft.AspNetCore.Authorization;
+//directive to use rate limiting attributes
 using Microsoft.AspNetCore.RateLimiting;
 
 //namespace for grouping services components together
@@ -157,8 +162,8 @@ public class VoteController : ControllerBase
                 BigInteger m = s.ModPow(publicKey.Exponent, publicKey.Modulus);
                 //convert recoverd integer back to fixed octet array matching the RSA modulus length k
                 int k = (publicKey.Modulus.BitLength + 7 ) / 8;
-                byte [] recoveredBytes = m.ToByteArrayUnsigned();
-                byte [] fixedLenRecovered = new byte[k];
+                //convert the recovered 
+                t
                 //left pad the recovered value with zeros if it is shorter than the modulus length
                 Buffer.BlockCopy(recoveredBytes, 0, fixedLenRecovered, k - recoveredBytes.Length, recoveredBytes.Length);
                 
