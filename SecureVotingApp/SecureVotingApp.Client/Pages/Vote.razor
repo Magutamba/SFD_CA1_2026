@@ -52,6 +52,8 @@
                     type="text"
                     @bind="voteChoice"
                     placeholder="Enter yes or no, anything else will be considered as a spoiled ballot"
+                    @*prevent change to vote while submitting*@
+                    disabled="@isLoading"
                 />
 
             </div>
@@ -153,8 +155,8 @@
     //submit anonymous credential and vote to the server
     private async Task SubmitVote()
     {
-        //ensure  credential exist before submission
-        if(isLoading ||voteSession == null || IsCredentialExpired)
+        //ensure  credential, vote is present exist before submission
+        if(isLoading ||voteSession == null || IsCredentialExpired || string.IsNullOrWhiteSpace(voteChoice))
             return;
         try
         {
