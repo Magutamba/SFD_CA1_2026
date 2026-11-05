@@ -1,5 +1,7 @@
-@page "/vote/{ElectionId}"
 <!-- @author Moïse *-->
+<!--***-->
+@page "/vote"
+@*@page "vote/{electionId}"*@
 
 <!--get the Contracts and Services*-->
 @using SecureVotingApp.Client.Contracts
@@ -12,7 +14,8 @@
 
 <div class="container mt-4">
         <p>
-            <strong>Election Id</strong> @ElectionId
+            <!--*** display the election id  if available -->
+            <strong>Election Id</strong> @(voteSession?.ElectionId ?? "election-2026")
         </p>
 
         <!-- Display the election the voter is participating in -->
@@ -48,7 +51,7 @@
                     id="voteChoice"
                     type="text"
                     @bind="voteChoice"
-                    placeholder="Enter yes, no, anything else will be considered as a spoiled ballot"
+                    placeholder="Enter yes or no, anything else will be considered as a spoiled ballot"
                 />
 
             </div>
@@ -66,13 +69,14 @@
         {
             <p class="text-danger">
                 Your voting credential has expired. Please request a new credential to vote.
-
-            <button class="btn btn-primary"
-                    @onclick="SubmitVote"
-                    disabled="@isLoading || string.isNullOrWhiteSpace(voteChoice) || IsCredentialExpired">
-                    @(isLoading ? "Submitting credentials..." : "Vote Submit")
-            </button>
             </p>
+            <!--*** fixed request of new credentials-->
+            <button class="btn btn-primary"
+                    @onclick="RequestCredentials"
+                    disabled="@isLoading || string.IsNullOrWhiteSpace(voteChoice) || IsCredentialExpired">
+                    @(isLoading ? "Requesting credentials..." : "Request new credentials")
+            </button>
+
         }
         <!-- display vote receipt for successful submission -->
         @if (receipt !=null)
@@ -97,9 +101,7 @@
 </div>
 
 @code{
-    //election id obtained from the route parameter in url
-    [Parameter]
-    public string ElectionId {get;set;} = string.Empty;
+    <!--*** removed the paramter for electionId-->
 
     //anonymous anonymous credential in memory
     private VoteSession? voteSession;
@@ -127,7 +129,8 @@
             errorMessage = string.Empty;
 
             //call api client to request and unblind the credentials from the server
-            voteSession = await VoterApiClient.RequestBallotAsync(ElectionId);
+            //*** remove the electionId parameter
+            voteSession = await VoterApiClient.RequestBallotAsync();
         }
         catch (Exception ex)
         {
@@ -143,7 +146,7 @@
     private async Task SubmitVote()
     {
         //ensure  credential exist before submission
-        if(voteSession == null)
+        if(isLoading ||voteSession == null || IsCredentialExpired)
             return;
         try
         {

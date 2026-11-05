@@ -17,7 +17,8 @@ public class VoterApiClient
     private readonly HttpClient httpClient;
     //private readlonly field for storing the injected client service for cryptographically blinding the voter in client
     private readonly IBlindCredentialClient blindVoterClient;
-
+    //***symplify application, but allows for future extension
+    private const string defaultElectionId = "election-2026"; 
     //constructor for VoterApiClient class, accepts dependencies via ASP.NET Core dpendency injection
     public VoterApiClient(HttpClient httpClient, IBlindCredentialClient blindVoterClient)
     {
@@ -26,10 +27,18 @@ public class VoterApiClient
         //assign injected blind credential service to the class field for use in blinding credentials before sending to server
         this.blindVoterClient = blindVoterClient;
     }
+    //***overload the method and allowing callers to omit the electionId and use the default electionId
+    public Task<VoteSession> RequestBallotAsync()
+    {
+        return  RequestBallotAsync(defaultElectionId);
+    }
 
     //method for requesting credentials and ballot from the server for voter to cast their vote
     public async Task<VoteSession> RequestBallotAsync(string electionId)
     {
+        //***safe guard to ensure electionId is not null or empty, throw exception if it is
+        string currentElectionId = string.IsNullOrWhiteSpace(electionId)? defaultElectionId : electionId;
+
         //genereate a random credential and blind it in client
         BlindCredentialRequest blindRequest = await blindVoterClient.CreateBlindedCredentialAsync(electionId);
 
@@ -42,7 +51,7 @@ public class VoterApiClient
         //wrap the blinded credential and electionId payload in a CredentialRequest object and serialize to JSON for the request body
         request.Content = JsonContent.Create(new CredentialRequest
             {
-                ElectionId = electionId,
+                ElectionId = currentElectionId,//*** pass the safeguarded electionId
                 BlindedCredential = blindRequest.BlindedCredential
             }
         );
