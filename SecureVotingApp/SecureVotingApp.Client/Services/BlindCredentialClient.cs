@@ -153,8 +153,4 @@ public class BlindCredentialClient : IBlindCredentialClient
         padded += new string('=', (4- padded.Length %4)%4);
         return Convert.FromBase64String(padded);
     }
-
-
-
-
 }
