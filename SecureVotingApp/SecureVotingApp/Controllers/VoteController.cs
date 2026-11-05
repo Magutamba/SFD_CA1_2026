@@ -100,8 +100,8 @@ public class VoteController : ControllerBase
             return BadRequest("Invalid credential encoding.");
         }
 
-        //verify the signature of the blinded credential using the server public keu
-        if(!VerifyCredentialSignature(request.ElectionId, signatureBytes))
+        //verify the signature of the blinded credential using the server public key
+        if(!VerifyCredentialSignature(electionId, signatureBytes))
         {
             return Unauthorized("Invalid voting credential signature.");
         }
