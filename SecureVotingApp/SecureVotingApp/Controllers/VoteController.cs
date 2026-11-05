@@ -52,7 +52,7 @@ public class VoteController : ControllerBase
 
     //***symplify application, but allows for future extension
     private const string defaultElectionId = "election-2026"; 
-    
+
     //inject the dbcontext and credential signer  into the constructor as dependency injection
     public VoteController(AppDbContext dbContext, CredentialSigner credentialSigner)
     {
@@ -81,7 +81,7 @@ public class VoteController : ControllerBase
     public async Task<IActionResult> SubmitVote([FromBody]AnonymousVoteSubmit request)
     {  
         //validate the request model
-        if(string.IsNullOrWhiteSpace(request.AnonymousCredential) ||string.IsNullOrWhiteSpace(request.ElectionId))
+        if(string.IsNullOrWhiteSpace(request.AnonymousCredential) ||string.IsNullOrWhiteSpace(request.VoteChoice))
         {
             return BadRequest("Invalid request data.");
         }
