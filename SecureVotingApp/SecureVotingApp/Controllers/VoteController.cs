@@ -50,6 +50,9 @@ public class VoteController : ControllerBase
     //credential signer for signing blinded credentials
     private readonly CredentialSigner credentialSigner;
 
+    //***symplify application, but allows for future extension
+    private const string defaultElectionId = "election-2026"; 
+    
     //inject the dbcontext and credential signer  into the constructor as dependency injection
     public VoteController(AppDbContext dbContext, CredentialSigner credentialSigner)
     {
