@@ -83,7 +83,7 @@ public class VoteController : ControllerBase
         //validate the request model
         if(string.IsNullOrWhiteSpace(request.AnonymousCredential) ||string.IsNullOrWhiteSpace(request.VoteChoice))
         {
-            return BadRequest("Invalid request data.");
+            return BadRequest("Invalid request data, credentials or vote choice is missing.");
         }
         //***safe guard to ensure electionId is not null or empty use  the defaultElectionId if it is
         string electionId = string.IsNullOrWhiteSpace(request.ElectionId)? defaultElectionId : request.ElectionId;
