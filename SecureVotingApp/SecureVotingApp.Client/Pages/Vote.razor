@@ -123,11 +123,19 @@
     //request and receive anonymous signed voting credentials 
     private async Task RequestCredentials()
     {
+        if (isLoading)
+            return;
         try
         {
             isLoading = true;
             errorMessage = string.Empty;
-
+            if (IsCredentialExpired)
+            {
+                //reset the vote session and receipt to allow for new credential request
+                voteSession = null;
+                receipt = null;
+                voteChoice = string.Empty;
+            }
             //call api client to request and unblind the credentials from the server
             //*** remove the electionId parameter
             voteSession = await VoterApiClient.RequestBallotAsync();
