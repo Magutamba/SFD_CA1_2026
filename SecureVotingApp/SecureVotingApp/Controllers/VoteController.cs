@@ -166,8 +166,6 @@ public class VoteController : ControllerBase
                 
                 //compare the fixed length recovered bytes with the original signature bytes to verify the signature
                 return fixedLenRecovered.Length == k;
-
-
             }
             catch
             {
