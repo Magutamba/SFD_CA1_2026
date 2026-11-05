@@ -135,7 +135,7 @@ public class VoteController : ControllerBase
 
         return Ok(new VoteReceipt
         {
-             ElectionId = request.ElectionId,
+             ElectionId = electionId,
              //generate a unique receipt id for the vote submission
              ReceiptId = Guid.NewGuid().ToString(),
              ConfirmationMessage = "Your vote has successfully been submitted."
