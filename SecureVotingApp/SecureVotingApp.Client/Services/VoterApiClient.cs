@@ -36,7 +36,7 @@ public class VoterApiClient
     //method for requesting credentials and ballot from the server for voter to cast their vote
     public async Task<VoteSession> RequestBallotAsync(string electionId)
     {
-        //***safe guard to ensure electionId is not null or empty, throw exception if it is
+        //***safe guard to ensure electionId is not null or empty use  the defaultElectionId if it is
         string currentElectionId = string.IsNullOrWhiteSpace(electionId)? defaultElectionId : electionId;
 
         //genereate a random credential and blind it in client

@@ -85,7 +85,8 @@ public class VoteController : ControllerBase
         {
             return BadRequest("Invalid request data.");
         }
-
+        //***safe guard to ensure electionId is not null or empty use  the defaultElectionId if it is
+        string electionId = string.IsNullOrWhiteSpace(request.ElectionId)? defaultElectionId : request.ElectionId;
         //variable for signed credential bytes
         byte[] signatureBytes;
         try
@@ -167,8 +168,8 @@ public class VoteController : ControllerBase
                 //left pad the recovered value with zeros if it is shorter than the modulus length
                 Buffer.BlockCopy(recoveredBytes, 0, fixedLenRecovered, k - recoveredBytes.Length, recoveredBytes.Length);
                 
-                //compare the fixed length recovered bytes with the original signature bytes to verify the signature
-                return fixedLenRecovered.Length == k;
+                //ensure the recovered integer m is  not zero and within the expected octet length bounds
+                return recoveredBytes.Length > 0 && recoveredBytes.Length<=k;
             }
             catch
             {
