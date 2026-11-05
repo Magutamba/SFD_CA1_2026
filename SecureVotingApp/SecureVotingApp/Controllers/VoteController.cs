@@ -116,7 +116,7 @@ public class VoteController : ControllerBase
         string credentialHash = Convert.ToBase64String(hashBytes);
 
         //check if the hash of the blinded credential has already been spent
-        bool beenSpent = await dbContext.SpentCredentials.AnyAsync(sbc =>sbc.ElectionId ==request.ElectionId && sbc.CredentialHash == credentialHash);
+        bool beenSpent = await dbContext.SpentCredentials.AnyAsync(sbc =>sbc.ElectionId ==electionId && sbc.CredentialHash == credentialHash);
     
         if (beenSpent)
         {
