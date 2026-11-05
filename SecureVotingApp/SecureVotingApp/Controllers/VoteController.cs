@@ -126,7 +126,7 @@ public class VoteController : ControllerBase
         //record the hash of the blinded credential as spent to prevent double voting
         dbContext.SpentCredentials.Add(new SpentCredential
         {
-            ElectionId = request.ElectionId,
+            ElectionId =electionId,
             CredentialHash = credentialHash,
             SpentAt = DateTimeOffset.UtcNow
         });
