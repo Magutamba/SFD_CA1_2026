@@ -116,28 +116,23 @@ public class BlindCredentialClient : IBlindCredentialClient
         //generates the PSS encoded and RSA blinded credential
         byte[] blindedBytes = pssSigner.GenerateSignature();
 
-        
-
-
-
-
-        //blinding the credential using RSA blind signature scheme
-        BigInteger rToE = r.ModPow(exponent, modulus);
-        //compute the blinded credential as m' = m * r^e mod N
-        BigInteger blindedNum = m.Multiply(rToE).Mod(modulus);
-
-        //fixed byte array of length k to match the RSA modulus length
-        byte[] fixedLenBlinded = new byte[k];
-
-        //left pad the blinded credential with zeros if it is shorter than the modulus length
-        Buffer.BlockCopy(blindedBytes, 0, fixedLenBlinded, k - blindedBytes.Length, blindedBytes.Length);
+        //ensure the blinded credential as the same RSA modulus length
+        if (!blindedBytes.Length.Equals(k))
+        {
+            throw new CryptographicException("Invalid blinded credential length");
+        }
 
         return new BlindCredentialRequest
         {
-            BlindedCredential = Base64UrlEncode(fixedLenBlinded),
+            //encoded blinded credential to send to the server for signing
+            BlindedCredential = Base64UrlEncode(blindedBytes),
+            //store information required to blind the signature
             State = new BlindState
             {
-                BlindingValue = Base64UrlEncode(r.ToByteArrayUnsigned())
+                BlindingValue = Base64UrlEncode(r.ToByteArrayUnsigned()),
+                MessaageRandomizer = Base64UrlEncode(messageRandomizer),
+                ElectionId = electionId
+
             }
 
         };
