@@ -36,6 +36,7 @@ public class AuthController : ControllerBase
     //[FromRoute]	Values inside the URL path	Retrieving a user by ID
     private readonly BcryptService _bcryptService;
     private readonly AppDbContext _dbContext;
+    private readonly ILogger<AuthController> _logger; //Author Aaron Byrne-Logger for storing authentication events such as registering, log-in etc.
     
     private EmailAddressAttribute emailChecker = new EmailAddressAttribute();
 
@@ -43,6 +44,7 @@ public class AuthController : ControllerBase
     {
         this._bcryptService = bcryptService;
         this._dbContext = dbContext;
+        this._logger = _logger; //Author Aaron Byrne-Stores logger passed in constructor for use in this controller
     }
     
     [HttpPost("register")]
@@ -182,7 +184,13 @@ public class AuthController : ControllerBase
             claimPrincipal
         );
 
-
+        //Author Aaron Byrne-Logging a successful login after user has signed in
+        _logger.LogInformation(
+            "User {UserId} has {EventType}",
+            "Login has succeeded",
+            user.Id
+        );
+        
         return Ok();
     }
 
