@@ -31,9 +31,9 @@ public class BlindCredentialClient : IBlindCredentialClient
     // cached RSA exponent estored in browser to avoid redundant key fetches
     private BigInteger? cachedExponent;
     //RFC 9474 SHA384 PSS salt length 48 bytes 
-    private const int pssSaltLength = 48;
-    //RFC 9474 randomized prepared message prefix is 32 bytes
-    private const int preparedMessageLength = 32;
+    private const int PSS_SaltLength = 48;
+    //RFC 9474 randomized message prefix is 32 bytes
+    private const int RandomizerLength = 32;
 
 
     //constructor to inject the HttpClient for making requests to the server
@@ -77,7 +77,11 @@ public class BlindCredentialClient : IBlindCredentialClient
         int k = (modulus.BitLength + 7) / 8;
         //EMSA-PSS padding structure using SHA384 per RFC 9474  
         byte[] messageBytes = System.Text.Encoding.UTF8.GetBytes(electionId);
-        //
+        //generates a random 32 byte prefix for the prepared message as required by RFC 9474 to prevent signature malleability
+        byte[] messageRandomizer = RandomNumberGenerator.GetBytes(RandomizerLength);
+        //append the prefix to the electionId message bytes to create the prepared message for signing
+        byte[] preparedMessage = new byte[RandomizerLength + messageBytes.Length];
+
         // add SHA384 to variable sha384 to use compute HASH encoded message bytes
         using var sha384 = SHA384.Create();
         //hash the electionId message using SHA384 to create a fixed length digest
