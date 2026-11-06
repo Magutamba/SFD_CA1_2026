@@ -104,7 +104,7 @@ public class AuthController : ControllerBase
 
         if (emailExists)
         {
-            return  Conflict(new { message = "Email already exists"});
+            return  Conflict("Email already exists");
         }
 
         //call the Bcrypt on the Argon2

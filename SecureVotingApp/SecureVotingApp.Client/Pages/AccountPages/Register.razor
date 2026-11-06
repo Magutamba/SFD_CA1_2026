@@ -1,11 +1,13 @@
 <!-- @author Lorenzo -->
 @page "/register"
-@rendermode @(new InteractiveWebAssemblyRenderMode(
-                prerender: false))
+<!--This page is rendered via the browser for the purpose of encrypting the user's password prior to submission. The backend server will at no point receive the user's true password credential-->
+@rendermode @(new InteractiveWebAssemblyRenderMode( 
+                prerender: false)) 
 @using System.Net
 @using System.Security.Cryptography
 @using System.Text
-@using TopSecret.Cryptography
+<!--TopSecret package used for Argon2 cryptographic operations in browser assembly-->
+@using TopSecret.Cryptography 
 @using SecureVotingApp.Components.Contracts
 @using SecureVotingApp.Client.Contracts.AccountContracts
 @using QRCoder
@@ -23,13 +25,20 @@
     <label>Confirm Password</label><br/>
     <InputText type="password" @bind-Value="_request.ConfirmPassword"/><br/>
     <button type="submit" disabled="@_isSubmitting">Create Account</button>
-
+    @if (_message is not null)
+    {
+        <p role="status">@_message</p>
+    }
     <DataAnnotationsValidator/>
     <ValidationSummary/>
 </EditForm>
 
 
-<!--Once the account creation is registered a 2FA QR generated to confirm account creation-->
+<!--
+    Once the account creation is registered a 2FA QR generated to confirm account creation
+    Modal is used to display the QR code and provides step-by-step instructions on how to set up 2FA on the user's mobile device
+
+-->
 @if (_confirmRegistration)
 {
     <EditForm Model="_confirmRequest" FormName="ConfirmRegistration" OnValidSubmit="ConfirmRegistration">
@@ -63,12 +72,17 @@
                 </div>
             </div>
         </div>
+        @if (_message is not null)
+        {
+            <p role="status">@_message</p>
+        }
         <DataAnnotationsValidator/>
         <ValidationSummary/>
     </EditForm>
 }
 
-@if (registrationComplete)
+
+@if (registrationComplete) // on confirmation of registration via 2FA code, modal dislays informing the user that their account has been successfully created
 {
     <div class="modal show d-block" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
@@ -89,20 +103,11 @@
                         Login Page
                     </button>
                 </div>
-
             </div>
         </div>
     </div>
-
     <div class="modal-backdrop fade show"></div>
 }
-
-@if (_message is not null)
-{
-    <p role="status">@_message</p>
-}
-
-
 
 @code {
     private readonly RegisterRequest _request = new();
@@ -136,6 +141,7 @@
 
         var hash = await argon2.GetBytesAsync(32);
 
+        // this value will eventually be stored in the database and used for credential validation during future login attempts
         var argon2Hash = Convert.ToBase64String(hash);
 
         var payload = new UserRegistration()
@@ -146,7 +152,7 @@
         };
         
         
-        // API Request
+        // API Registration Request - backend returns a TOTP setup URI and Registration ID used for confirmation of registration via 2FA code
         using var response = await Http.PostAsJsonAsync(
             "api/auth/register",
             payload);
@@ -185,6 +191,8 @@
 
     private void GenerateQrCode(string setupUri)
     {
+        // QRCoder library used to generate QR code image for 2FA setup
+        // QR code is displayed in a modal dialog when user submits initial registration account details
         byte[] qrBytes = PngByteQRCodeHelper.GetQRCode(
             setupUri,
             QRCodeGenerator.ECCLevel.Q,
