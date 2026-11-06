@@ -37,7 +37,7 @@
 
         <!--show the credential request button before session starts --->
 
-        @if(voteSession == null)
+        @if(voteSession == null || IsCredentialExpired)
         {
             <!-- request credentials before allowing vote -->
             <p>Request Credentials to vote</p>
@@ -47,7 +47,7 @@
                     @(isLoading ? "Requesting credentials..." : "Request Credentials")
             </button>
         }
-        else if( receipt == null)
+        else if(receipt == null)
         {
             <hr />
             <h3> Voting Credential Issued</h3>
