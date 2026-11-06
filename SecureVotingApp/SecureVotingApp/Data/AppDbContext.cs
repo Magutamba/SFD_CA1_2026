@@ -54,6 +54,10 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<AnonBallot>()
             .Property(ballot => ballot.VoteChoice)
             .IsRequired();//Ensures that there is a vote therefore vote cannot be null
+        
+        modelBuilder.Entity<AnonBallot>()
+            .Property(ballot => ballot.ElectionId)
+            .IsRequired();//Ensures that each vote belongs to an election
     }
     
 }

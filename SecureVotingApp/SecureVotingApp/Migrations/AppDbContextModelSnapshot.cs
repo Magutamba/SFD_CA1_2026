@@ -23,6 +23,10 @@ namespace SecureVotingApp.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("ElectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("VoteChoice")
                         .IsRequired()
                         .HasColumnType("TEXT");
