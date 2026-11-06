@@ -171,6 +171,7 @@ public class VoteController : ControllerBase
             byte[] fixedLenRecovered = new byte[k];
             //left pad the recovered value with zeros if it is shorter than the modulus length
             Buffer.BlockCopy(recoveredBytes, 0, fixedLenRecovered, k - recoveredBytes.Length, recoveredBytes.Length);
+            
             //EMSA-PSS padding structure using SHA384 per RFC 9474  
             byte[] messageBytes = System.Text.Encoding.UTF8.GetBytes(electionId);
             // create a PSS signer with RSA engine and SHA384 digest for signature verification
