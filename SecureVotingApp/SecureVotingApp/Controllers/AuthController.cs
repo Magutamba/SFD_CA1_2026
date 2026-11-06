@@ -124,6 +124,12 @@ public class AuthController : ControllerBase
            return Conflict("Registration could not complete");
         }
             
+        //Author Aaron Byrne-Logging a new user registration
+        _logger.LogInformation(
+            "{UserID} has had their {EventType}",
+            newUser.Id,
+            "Registration successful"
+            );
         return Ok();
     }
 
