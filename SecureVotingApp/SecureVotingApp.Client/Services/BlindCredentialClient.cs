@@ -9,9 +9,15 @@ using System.Net.Http;
 using System.Net.Http.Json;
 //directives to support asynchronous programming and tasks
 using System.Threading.Tasks;
+//cryptographic key parameter for RSA private key
+using Org.BouncyCastle.Crypto.Parameters;
+// bouncy caste signers and digests for RFC 9474 compliant EMSA-PSS verification
+using Org.BouncyCastle.Crypto.Signers;
+using Org.BouncyCastle.Crypto.Digests;
 // directive for BouncyCastle BigInteger class RSA arithmetic
 using Org.BouncyCastle.Math;
-
+//engine for RSA encryption and decryption
+using Org.BouncyCastle.Crypto.Engines;
 //logical namespace for grouping services components together
 namespace SecureVotingApp.Client.Services;
 
@@ -66,11 +72,19 @@ public class BlindCredentialClient : IBlindCredentialClient
         int k = (modulus.BitLength + 7) / 8;
         //EMSA-PSS padding structure using SHA384 per RFC 9474  
         byte[] messageBytes = System.Text.Encoding.UTF8.GetBytes(electionId);
-        //generate a random integer m in the range [1, N-1] where N is the RSA modulus as to be m<N
-        byte[] rawCredentialBytes = RandomNumberGenerator.GetBytes(k - 1);
+        //
+        var pubKey = new RsaKeyParameters(false, modulus, exponent);
+        // create a PSS signer with RSA engine and SHA384 digest for signature verification
+        var pssSigner = new PssSigner(new RsaEngine(), new Sha384Digest(), 48);
+        // initialize the PSS signer with the public key
+        pssSigner.Init(true, pubKey);
+        // update the PSS signer with the message bytes
+        pssSigner.BlockUpdate(messageBytes, 0, messageBytes.Length);
+        // generate the PSS encoded signature bytes for the electionId message
+        byte[] pssEncodedBytes = pssSigner.GenerateSignature();
 
-        //converts the raw credential bytes into a positive BigInteger m for RSA arithmetic 
-        var m = new BigInteger(1, rawCredentialBytes);
+        //converts the pss encoded message bytes into a positive BigInteger m for RSA arithmetic 
+        var m = new BigInteger(1, pssEncodedBytes);
 
         //declare a variable to hold the blinding factor r, while ensuring it is coprime to the RSA modulus N
         BigInteger r;

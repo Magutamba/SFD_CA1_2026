@@ -7,7 +7,7 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 //interface and classes for cryptographic algorithms in BouncyCastle RSA
 using Org.BouncyCastle.Crypto;
-//cryptographic key parameter for RSA orivate key
+//cryptographic key parameter for RSA private key
 using Org.BouncyCastle.Crypto.Parameters;
 //BigInteger class for RSA arithmetic
 using Org.BouncyCastle.Math;
@@ -173,9 +173,9 @@ public class VoteController : ControllerBase
                 Buffer.BlockCopy(recoveredBytes, 0, fixedLenRecovered, k - recoveredBytes.Length, recoveredBytes.Length);
                 //EMSA-PSS padding structure using SHA384 per RFC 9474  
                 byte [] messageBytes = System.Text.Encoding.UTF8.GetBytes(electionId);
-                //ensure the recovered integer m is  not zero and within the expected octet length bounds
-
+                // create a PSS signer with RSA engine and SHA384 digest for signature verification
                 var pssSigner = new PssSigner(new RsaEngine(), new Sha384Digest(), 48);
+                //ensure the recovered integer m is  not zero and within the expected octet length bounds
                 return recoveredBytes.Length > 0 && recoveredBytes.Length<=k;
             }
             catch
