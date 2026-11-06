@@ -54,8 +54,8 @@ public class VoteController : ControllerBase
     //credential signer for signing blinded credentials
     private readonly CredentialSigner credentialSigner;
 
-    //***symplify application, but allows for future extension
-    private const string defaultElectionId = "election-2026"; 
+    //symplify application, but allows for future extension
+    private const string defaultElectionId = "election-2026";
 
     //inject the dbcontext and credential signer  into the constructor as dependency injection
     public VoteController(AppDbContext dbContext, CredentialSigner credentialSigner)
@@ -73,8 +73,8 @@ public class VoteController : ControllerBase
         return Ok(new
         {
             //Modulus and Exponent are encoded in base64url format for safe transmission over HTTP
-            Modulus =Base64UrlEncoder(pubKey.Modulus.ToByteArrayUnsigned()),
-            // * FIXED: RsaKeyParameters exposes the exponent as Exponent.
+            Modulus = Base64UrlEncoder(pubKey.Modulus.ToByteArrayUnsigned()),
+            // RsaKeyParameters exposes the exponent as Exponent.
             Exponent = Base64UrlEncoder(pubKey.Exponent.ToByteArrayUnsigned())
         });
     }
@@ -82,15 +82,15 @@ public class VoteController : ControllerBase
     //handle post request to submit ballot
     [HttpPost]
     //FromBody attribute indicates the request body will be deserialized into the AnonymousVoteSubmit object
-    public async Task<IActionResult> SubmitVote([FromBody]AnonymousVoteSubmit request)
-    {  
+    public async Task<IActionResult> SubmitVote([FromBody] AnonymousVoteSubmit request)
+    {
         //validate the request model
-        if(string.IsNullOrWhiteSpace(request.AnonymousCredential) ||string.IsNullOrWhiteSpace(request.VoteChoice))
+        if (string.IsNullOrWhiteSpace(request.AnonymousCredential) || string.IsNullOrWhiteSpace(request.VoteChoice))
         {
             return BadRequest("Invalid request data, credentials or vote choice is missing.");
         }
         //***safe guard to ensure electionId is not null or empty use  the defaultElectionId if it is
-        string electionId = string.IsNullOrWhiteSpace(request.ElectionId)? defaultElectionId : request.ElectionId;
+        string electionId = string.IsNullOrWhiteSpace(request.ElectionId) ? defaultElectionId : request.ElectionId;
         //variable for signed credential bytes
         byte[] signatureBytes;
         try
@@ -105,7 +105,7 @@ public class VoteController : ControllerBase
         }
 
         //verify the signature of the blinded credential using the server public key
-        if(!VerifyCredentialSignature(electionId, signatureBytes))
+        if (!VerifyCredentialSignature(electionId, signatureBytes))
         {
             return Unauthorized("Invalid voting credential signature.");
         }
@@ -120,17 +120,17 @@ public class VoteController : ControllerBase
         string credentialHash = Convert.ToBase64String(hashBytes);
 
         //check if the hash of the blinded credential has already been spent
-        bool beenSpent = await dbContext.SpentCredentials.AnyAsync(sbc =>sbc.ElectionId ==electionId && sbc.CredentialHash == credentialHash);
-    
+        bool beenSpent = await dbContext.SpentCredentials.AnyAsync(sbc => sbc.ElectionId == electionId && sbc.CredentialHash == credentialHash);
+
         if (beenSpent)
         {
-            return Conflict(new {message = "This voting credential has already been used."});
+            return Conflict(new { message = "This voting credential has already been used." });
         }
-    
+
         //record the hash of the blinded credential as spent to prevent double voting
         dbContext.SpentCredentials.Add(new SpentCredential
         {
-            ElectionId =electionId,
+            ElectionId = electionId,
             CredentialHash = credentialHash,
             SpentAt = DateTimeOffset.UtcNow
         });
@@ -139,60 +139,64 @@ public class VoteController : ControllerBase
 
         return Ok(new VoteReceipt
         {
-             ElectionId = electionId,
-             //generate a unique receipt id for the vote submission
-             ReceiptId = Guid.NewGuid().ToString(),
-             ConfirmationMessage = "Your vote has successfully been submitted."
+            ElectionId = electionId,
+            //generate a unique receipt id for the vote submission
+            ReceiptId = Guid.NewGuid().ToString(),
+            ConfirmationMessage = "Your vote has successfully been submitted."
 
         });
     }
-        
-        private bool VerifyCredentialSignature(string electionId, byte[]signatureBytes)
-        {
-            try
-            {   
-                //retrieve the server RSA public key parameters(Modulus N and exponent e) from the credential signer
-                RsaKeyParameters publicKey = credentialSigner.GetPublicKey();
-                // converts the raw signature bytes into a positive BigInteger scalar s for modular arithmetic
-                var s = new BigInteger(1, signatureBytes);
 
-                //reject signature integers out of RSA
-                if(s.CompareTo(BigInteger.One)<= 0 || s.CompareTo(publicKey.Modulus) >= 0)
-                {
-                    return false;
-                }
-                //RFC 9474 verification of RSA signature using public key and exponent
-                BigInteger m = s.ModPow(publicKey.Exponent, publicKey.Modulus);
-                //convert recoverd integer back to fixed octet array matching the RSA modulus length k
-                int k = (publicKey.Modulus.BitLength + 7 ) / 8;
-                //convert the recovered RSA integer m to an unsigned byte array 
-                byte [] recoveredBytes = m.ToByteArrayUnsigned();
-                //create a fixed length byte array of length k to match the RSA key modulus byte length 
-                byte [] fixedLenRecovered = new byte[k];
-                //left pad the recovered value with zeros if it is shorter than the modulus length
-                Buffer.BlockCopy(recoveredBytes, 0, fixedLenRecovered, k - recoveredBytes.Length, recoveredBytes.Length);
-                //EMSA-PSS padding structure using SHA384 per RFC 9474  
-                byte [] messageBytes = System.Text.Encoding.UTF8.GetBytes(electionId);
-                // create a PSS signer with RSA engine and SHA384 digest for signature verification
-                var pssSigner = new PssSigner(new RsaEngine(), new Sha384Digest(), 48);
-                //ensure the recovered integer m is  not zero and within the expected octet length bounds
-                return recoveredBytes.Length > 0 && recoveredBytes.Length<=k;
-            }
-            catch
+    private bool VerifyCredentialSignature(string electionId, byte[] signatureBytes)
+    {
+        try
+        {
+            //retrieve the server RSA public key parameters(Modulus N and exponent e) from the credential signer
+            RsaKeyParameters publicKey = credentialSigner.GetPublicKey();
+            // converts the raw signature bytes into a positive BigInteger scalar s for modular arithmetic
+            var s = new BigInteger(1, signatureBytes);
+
+            //reject signature integers out of RSA
+            if (s.CompareTo(BigInteger.One) <= 0 || s.CompareTo(publicKey.Modulus) >= 0)
             {
-              return false;
+                return false;
             }
-        }
-        //decode the base64 url encoded blinded credential into a byte array
-        private static byte[] Base64UrlDecoder(string data)
+            //RFC 9474 verification of RSA signature using public key and exponent
+            BigInteger m = s.ModPow(publicKey.Exponent, publicKey.Modulus);
+            //convert recoverd integer back to fixed octet array matching the RSA modulus length k
+            int k = (publicKey.Modulus.BitLength + 7) / 8;
+            //convert the recovered RSA integer m to an unsigned byte array 
+            byte[] recoveredBytes = m.ToByteArrayUnsigned();
+            //create a fixed length byte array of length k to match the RSA key modulus byte length 
+            byte[] fixedLenRecovered = new byte[k];
+            //left pad the recovered value with zeros if it is shorter than the modulus length
+            Buffer.BlockCopy(recoveredBytes, 0, fixedLenRecovered, k - recoveredBytes.Length, recoveredBytes.Length);
+            //EMSA-PSS padding structure using SHA384 per RFC 9474  
+            byte[] messageBytes = System.Text.Encoding.UTF8.GetBytes(electionId);
+            // create a PSS signer with RSA engine and SHA384 digest for signature verification
+            var pssSigner = new PssSigner(new RsaEngine(), new Sha384Digest(), 48);
+            // initialize the PSS signer with the public key
+            pssSigner.Init(true, publicKey);
+            // update the PSS signer with the message bytes
+            pssSigner.BlockUpdate(messageBytes, 0, messageBytes.Length);
+            // verify the PSS padding of the recovered message bytes against the original electionId message
+            return 
+            }
+        catch
         {
-            string padded = data.Replace('-','+').Replace('_','/');
-            padded += new string('=', (4 - padded.Length % 4) % 4);
-            return Convert.FromBase64String(padded);
+            return false;
         }
-        //encode bytes to base64 url for public key endpoint
-        private static string Base64UrlEncoder(byte[] data)
-        {
-            return Convert.ToBase64String(data).Replace('+', '-').Replace('/','_').TrimEnd('=');
-        }
+    }
+    //decode the base64 url encoded blinded credential into a byte array
+    private static byte[] Base64UrlDecoder(string data)
+    {
+        string padded = data.Replace('-', '+').Replace('_', '/');
+        padded += new string('=', (4 - padded.Length % 4) % 4);
+        return Convert.FromBase64String(padded);
+    }
+    //encode bytes to base64 url for public key endpoint
+    private static string Base64UrlEncoder(byte[] data)
+    {
+        return Convert.ToBase64String(data).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+    }
 }
