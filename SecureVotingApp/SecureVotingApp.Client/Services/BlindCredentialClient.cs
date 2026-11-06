@@ -38,9 +38,9 @@ public class BlindCredentialClient : IBlindCredentialClient
     //fetch the RSA public key dynamically from server and cache it for future use
     public async Task PublicKeyLoadedAsync()
     {
-        if(cachedModulus!=null && cachedExponent != null) return;
+        if (cachedModulus != null && cachedExponent != null) return;
         //fetches and deserializes the public key from the server endpoint into a public key DTO object
-        PublicKeyDTO pubKeyDTO = await httpClient.GetFromJsonAsync<PublicKeyDTO>("api/votes/keys") 
+        PublicKeyDTO pubKeyDTO = await httpClient.GetFromJsonAsync<PublicKeyDTO>("api/votes/keys")
             ?? throw new InvalidOperationException("Failed to load public RSA key from server.");
 
         //decode the base64url encoded RSA modulus and exponent into raw byte array
@@ -48,7 +48,7 @@ public class BlindCredentialClient : IBlindCredentialClient
         byte[] exponentBytes = Base64UrlDecode(pubKeyDTO.Exponent);
 
         //conver the raw byte arrays into positive BigInteger values for RSA arithmetic
-        cachedModulus = new BigInteger(1,modulusBytes);
+        cachedModulus = new BigInteger(1, modulusBytes);
         cachedExponent = new BigInteger(1, exponentBytes);
     }
 
@@ -61,11 +61,11 @@ public class BlindCredentialClient : IBlindCredentialClient
         //starts as null but will be set after PublicKeyLoadedAsync is called
         BigInteger modulus = cachedModulus!;
         BigInteger exponent = cachedExponent!;
-        
+
         //calculates the RSA modulus byte length k rounding bits to full octet 
-        int k = (modulus.BitLength + 7) /8 ;
+        int k = (modulus.BitLength + 7) / 8;
         //generate a random integer m in the range [1, N-1] where N is the RSA modulus as to be m<N
-        byte[] rawCredentialBytes = RandomNumberGenerator.GetBytes(k-1);
+        byte[] rawCredentialBytes = RandomNumberGenerator.GetBytes(k - 1);
 
         //converts the raw credential bytes into a positive BigInteger m for RSA arithmetic 
         var m = new BigInteger(1, rawCredentialBytes);
@@ -75,13 +75,13 @@ public class BlindCredentialClient : IBlindCredentialClient
         do
         {
             // generate a random blinding factor r in the range [1, N-1] where N is the RSA modulus
-            byte[] rBytes =RandomNumberGenerator.GetBytes(k);
+            byte[] rBytes = RandomNumberGenerator.GetBytes(k);
             //convert the random bytes into a positive BigInteger r for RSA arithmetic
-            r = new BigInteger(1,rBytes);
+            r = new BigInteger(1, rBytes);
 
-        }while(r.CompareTo(BigInteger.One)<=0 || r.CompareTo(modulus)>=0 || !r.Gcd(modulus).Equals(BigInteger.One));
+        } while (r.CompareTo(BigInteger.One) <= 0 || r.CompareTo(modulus) >= 0 || !r.Gcd(modulus).Equals(BigInteger.One));
         //blinding the credential using RSA blind signature scheme
-        BigInteger rToE = r.ModPow(exponent,modulus);
+        BigInteger rToE = r.ModPow(exponent, modulus);
         //compute the blinded credential as m' = m * r^e mod N
         BigInteger blindedNum = m.Multiply(rToE).Mod(modulus);
 
@@ -91,7 +91,7 @@ public class BlindCredentialClient : IBlindCredentialClient
         byte[] fixedLenBlinded = new byte[k];
 
         //left pad the blinded credential with zeros if it is shorter than the modulus length
-        Buffer.BlockCopy(blindedBytes,0, fixedLenBlinded, k - blindedBytes.Length, blindedBytes.Length);
+        Buffer.BlockCopy(blindedBytes, 0, fixedLenBlinded, k - blindedBytes.Length, blindedBytes.Length);
 
         return new BlindCredentialRequest
         {
@@ -113,44 +113,46 @@ public class BlindCredentialClient : IBlindCredentialClient
         BigInteger modulus = cachedModulus!;
 
         //convert the base64 url encoded signed blinded credential to a byte array
-        byte[] signedBytes  = Base64UrlDecode(signedBlindedCredential);
+        byte[] signedBytes = Base64UrlDecode(signedBlindedCredential);
 
         //converts the base64 url encoded blinding value to a byte array
         byte[] rBytes = Base64UrlDecode(state.BlindingValue);
 
         // convert the signed blinded credential bytes into a positive BigInteger s' for RSA arithmetic
-        var sPrime = new BigInteger(1,signedBytes);
- 
+        var sPrime = new BigInteger(1, signedBytes);
+
         //ublinding math
         // convert the blinding value bytes into a positive BigInteger r for RSA arithmetic
-        var r = new BigInteger(1,rBytes);
+        var r = new BigInteger(1, rBytes);
 
         // compute the modular inverse of the blinding factor r with respect to the RSA modulus N
         BigInteger rInverse = r.ModInverse(modulus);
         // compute the unblinded credential as m = s' * r^(-1) mod N
         BigInteger unBlindedNum = sPrime.Multiply(rInverse).Mod(modulus);
         // calculate the RSA modulus byte length k rounding bits to full octet
-        int k = (modulus.BitLength + 7) /8;
+        int k = (modulus.BitLength + 7) / 8;
+        //EMSA-PSS padding structure using SHA384 per RFC 9474  
+        byte[] messageBytes = System.Text.Encoding.UTF8.GetBytes("election-2026");
         //convert the unblinded integer back to a fixed length byte array
         byte[] unBlindedBytes = unBlindedNum.ToByteArrayUnsigned();
         // create a fixed length byte array of length k to match the RSA key modulus byte length
         byte[] fixedLenUnBlinded = new byte[k];
         //left pad the unblinded value with zeros if it is shorter than the modulus length
-        Buffer.BlockCopy(unBlindedBytes, 0, fixedLenUnBlinded, k- unBlindedBytes.Length, unBlindedBytes.Length);
+        Buffer.BlockCopy(unBlindedBytes, 0, fixedLenUnBlinded, k - unBlindedBytes.Length, unBlindedBytes.Length);
 
         // return the unblinded credential as a base64 url encoded string to the client
-        return Base64UrlEncode(fixedLenUnBlinded); 
+        return Base64UrlEncode(fixedLenUnBlinded);
     }
 
     //helper method to decode base64 url encoded string into a byte array
     private static string Base64UrlEncode(byte[] data) =>
-        Convert.ToBase64String(data).Replace('+', '-').Replace('/','_').TrimEnd('=');
+        Convert.ToBase64String(data).Replace('+', '-').Replace('/', '_').TrimEnd('=');
 
     //helper method to decode base64 url encoded string into a byte array
     private static byte[] Base64UrlDecode(string data)
     {
-        string padded = data.Replace('-','+').Replace('_', '/');
-        padded += new string('=', (4- padded.Length %4)%4);
+        string padded = data.Replace('-', '+').Replace('_', '/');
+        padded += new string('=', (4 - padded.Length % 4) % 4);
         return Convert.FromBase64String(padded);
     }
 }
