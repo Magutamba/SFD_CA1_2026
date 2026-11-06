@@ -40,7 +40,7 @@ public class VoterApiClient
         string currentElectionId = string.IsNullOrWhiteSpace(electionId)? defaultElectionId : electionId;
 
         //genereate a random credential and blind it in client
-        BlindCredentialRequest blindRequest = await blindVoterClient.CreateBlindedCredentialAsync(electionId);
+        BlindCredentialRequest blindRequest = await blindVoterClient.CreateBlindedCredentialAsync(currentElectionId);
 
         //send the blinded credential to the server and request a signed credential and ballot
         using var request = new HttpRequestMessage(HttpMethod.Post, $"api/elections/{electionId}/credential");

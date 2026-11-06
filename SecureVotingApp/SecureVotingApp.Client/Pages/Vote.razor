@@ -82,19 +82,6 @@
 
         }
 
-        @if (IsCredentialExpired)
-        {
-            <p class="text-danger">
-                Your voting credential has expired. Please request a new credential to vote.
-            </p>
-            <!--*** fixed request of new credentials-->
-            <button class="btn btn-primary"
-                    @onclick="RequestCredentials"
-                    disabled="@isLoading">
-                    @(isLoading ? "Requesting credentials..." : "Request new credentials")
-            </button>
-
-        }
         <!-- display vote receipt for successful submission -->
         @if (receipt !=null)
         {
