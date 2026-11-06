@@ -25,4 +25,8 @@
       <ProjectReference Include="..\SecureVotingApp.Client\SecureVotingApp.Client.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="appLogs\" />
+    </ItemGroup>
+
 </Project>

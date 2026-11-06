@@ -40,11 +40,11 @@ public class AuthController : ControllerBase
     
     private EmailAddressAttribute emailChecker = new EmailAddressAttribute();
 
-        public AuthController(BcryptService bcryptService, AppDbContext dbContext)
+        public AuthController(BcryptService bcryptService, AppDbContext dbContext, ILogger<AuthController> logger)
     {
         this._bcryptService = bcryptService;
         this._dbContext = dbContext;
-        this._logger = _logger; //Author Aaron Byrne-Stores logger passed in constructor for use in this controller
+        this._logger = logger; //Author Aaron Byrne-Stores logger passed in constructor for use in this controller
     }
     
     [HttpPost("register")]
@@ -186,9 +186,10 @@ public class AuthController : ControllerBase
 
         //Author Aaron Byrne-Logging a successful login after user has signed in
         _logger.LogInformation(
-            "User {UserId} has {EventType}",
-            "Login has succeeded",
-            user.Id
+            "User {UserId} {EventType}",
+            user.Id,
+            "Login has succeeded"
+            
         );
         
         return Ok();

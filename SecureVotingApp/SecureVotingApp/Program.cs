@@ -5,7 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Serilog;
-using Serilog.Formatting.Compact;//Aaron Byrne-Allows for logs to be displayes as JSON rather than plaintext
+using Serilog.Formatting.Compact;//Aaron Byrne-Allows for logs to be displays as JSON rather than plaintext
+using Serilog.Events;//Aaron Byrne-Allows for logging levels to be set, testing showed that over 1000 lines in the log were being created, which makes reading the information we need difficult
 
 //registering Dependency Injection
 var builder = WebApplication.CreateBuilder(args);
@@ -13,10 +14,15 @@ var builder = WebApplication.CreateBuilder(args);
 //Author Aaron Byrne- Registering Serilog to be our logger and sending log messages to the terminal in IDE https://github.com/serilog/serilog-aspnetcore#serilogaspnetcore--- 
 builder.Services.AddSerilog((services, configuration) =>
 {
-    configuration.WriteTo.Console().WriteTo.File(//Author Aaron Byrne- Saves logs to a file as JSON 
-        new CompactJsonFormatter(),
-        "appLogs/logs.json",//Author Aaron Byrne- Saves logs within a JSON folder
-        rollingInterval: RollingInterval.Day);//Author Aaron Byrne- This will create a new log file each day
+    configuration
+        .MinimumLevel.Information()//Author Aaron Byrne-Ensures debug messages do not get saved to logs, but errors, info and warnings do
+        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)//Author Aaron Byrne-Only records errors and warnings from Micorsoft framework code
+        .MinimumLevel.Override("System", LogEventLevel.Warning)//Author Aaron Byrne-Ensures that logging from background .NET components is reduced
+        .WriteTo.Console()
+        .WriteTo.File(//Author Aaron Byrne-Saves logs to a file as JSON 
+        new RenderedCompactJsonFormatter(),//Author Aaron Byrne-Rendered allows for UserID and EventType to actually show up within the logs
+        "appLogs/logs.json",//Author Aaron Byrne-Saves logs within a JSON folder
+        rollingInterval: RollingInterval.Day);//Author Aaron Byrne-This will create a new log file each day
 });
 
 //back end (DI) registery (Jeán Walton)
