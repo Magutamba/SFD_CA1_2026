@@ -46,7 +46,7 @@ public class BlindCredentialClient : IBlindCredentialClient
     {
         if (cachedModulus != null && cachedExponent != null) return;
         //fetches and deserializes the public key from the server endpoint into a public key DTO object
-        PublicKeyDTO pubKeyDTO = await httpClient.GetFromJsonAsync<PublicKeyDTO>("api/votes/keys")
+        PublicKeyDTO pubKeyDTO = await httpClient.GetFromJsonAsync<PublicKeyDTO>("api/vote/keys")
             ?? throw new InvalidOperationException("Failed to load public RSA key from server.");
 
         //decode the base64url encoded RSA modulus and exponent into raw byte array
