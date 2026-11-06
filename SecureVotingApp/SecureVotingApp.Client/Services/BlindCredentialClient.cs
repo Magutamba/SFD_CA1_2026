@@ -76,8 +76,6 @@ public class BlindCredentialClient : IBlindCredentialClient
         using var sha384 = SHA384.Create();
         //hash the electionId message using SHA384 to create a fixed length digest
         byte[] hashedMessage = sha384.ComputeHash(messageBytes);
-        //converts the pss encoded message bytes into a positive BigInteger m for RSA arithmetic 
-        var m = new BigInteger(1, hashedMessage);
         var pubKey = new RsaKeyParameters(false, modulus, exponent);
         // create a PSS signer with RSA engine and SHA384 digest for signature verification
         var pssSigner = new PssSigner(new RsaEngine(), new Sha384Digest(), 48);
@@ -87,6 +85,8 @@ public class BlindCredentialClient : IBlindCredentialClient
         pssSigner.BlockUpdate(messageBytes, 0, messageBytes.Length);
         // generate the PSS encoded signature bytes for the electionId message
         byte[] pssEncodedBytes = pssSigner.GenerateSignature();
+        //converts the pss encoded message bytes into a positive BigInteger m for RSA arithmetic 
+        var m = new BigInteger(1, pssEncodedBytes);
 
         //declare a variable to hold the blinding factor r, while ensuring it is coprime to the RSA modulus N
         BigInteger r;
