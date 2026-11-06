@@ -146,7 +146,16 @@ public class AuthController : ControllerBase
 
         //check db if user exist using email if so return the user object 
         User? user = await _dbContext.Users.FirstOrDefaultAsync(user => user.Email == normalisedEmailLogin);
-        if(user is null) return Unauthorized("Invalid credentials");
+        if(user is null)
+        {
+            //Author Aaron Byrne-Logging a failed login when the inputted credentials are invalid
+            _logger.LogWarning(
+                "{EventType} occured because {Reason}",
+                "Login has failed",
+                "Invalid Credentials"
+            );
+            return Unauthorized("Invalid credentials");
+        }
         
         //check that the password is not null
         bool isValidArgon2Hash = !string.IsNullOrWhiteSpace(request.Argon2Hash);
@@ -166,7 +175,16 @@ public class AuthController : ControllerBase
 
         //to verify credentials 
         bool isValidPassword = _bcryptService.VerifyCredential(request.Argon2Hash, user.CredentialHash);
-        if(!isValidPassword) return Unauthorized("Invalid credentials");
+        if(!isValidPassword)
+            //Author Aaron Byrne-Logging a failed login when password is incorrect
+        {
+            _logger.LogWarning(
+                "{EventType} occured because {Reason}",
+                "Login has failed",
+                "Invalid Credentials"
+                );
+            return Unauthorized("Invalid credentials");
+        }
 
 
         //collection of claims
