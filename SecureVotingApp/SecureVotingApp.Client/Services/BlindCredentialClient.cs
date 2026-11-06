@@ -64,6 +64,8 @@ public class BlindCredentialClient : IBlindCredentialClient
 
         //calculates the RSA modulus byte length k rounding bits to full octet 
         int k = (modulus.BitLength + 7) / 8;
+        //EMSA-PSS padding structure using SHA384 per RFC 9474  
+        byte[] messageBytes = System.Text.Encoding.UTF8.GetBytes(electionId);
         //generate a random integer m in the range [1, N-1] where N is the RSA modulus as to be m<N
         byte[] rawCredentialBytes = RandomNumberGenerator.GetBytes(k - 1);
 
@@ -131,8 +133,6 @@ public class BlindCredentialClient : IBlindCredentialClient
         BigInteger unBlindedNum = sPrime.Multiply(rInverse).Mod(modulus);
         // calculate the RSA modulus byte length k rounding bits to full octet
         int k = (modulus.BitLength + 7) / 8;
-        //EMSA-PSS padding structure using SHA384 per RFC 9474  
-        byte[] messageBytes = System.Text.Encoding.UTF8.GetBytes("election-2026");
         //convert the unblinded integer back to a fixed length byte array
         byte[] unBlindedBytes = unBlindedNum.ToByteArrayUnsigned();
         // create a fixed length byte array of length k to match the RSA key modulus byte length
