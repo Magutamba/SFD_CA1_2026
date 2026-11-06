@@ -36,13 +36,15 @@ public class AuthController : ControllerBase
     //[FromRoute]	Values inside the URL path	Retrieving a user by ID
     private readonly BcryptService _bcryptService;
     private readonly AppDbContext _dbContext;
+    private readonly ILogger<AuthController> _logger; //Author Aaron Byrne-Logger for storing authentication events such as registering, log-in etc.
     
     private EmailAddressAttribute emailChecker = new EmailAddressAttribute();
 
-        public AuthController(BcryptService bcryptService, AppDbContext dbContext)
+        public AuthController(BcryptService bcryptService, AppDbContext dbContext, ILogger<AuthController> logger)
     {
         this._bcryptService = bcryptService;
         this._dbContext = dbContext;
+        this._logger = logger; //Author Aaron Byrne-Stores logger passed in constructor for use in this controller
     }
     
     [HttpPost("register")]
@@ -122,6 +124,12 @@ public class AuthController : ControllerBase
            return Conflict("Registration could not complete");
         }
             
+        //Author Aaron Byrne-Logging a new user registration
+        _logger.LogInformation(
+            "{UserID} has had their {EventType}",
+            newUser.Id,
+            "Registration successful"
+            );
         return Ok();
     }
 
@@ -144,7 +152,16 @@ public class AuthController : ControllerBase
 
         //check db if user exist using email if so return the user object 
         User? user = await _dbContext.Users.FirstOrDefaultAsync(user => user.Email == normalisedEmailLogin);
-        if(user is null) return Unauthorized("Invalid credentials");
+        if(user is null)
+        {
+            //Author Aaron Byrne-Logging a failed login when the inputted credentials are invalid
+            _logger.LogWarning(
+                "{EventType} occured because {Reason}",
+                "Login has failed",
+                "Invalid Credentials"
+            );
+            return Unauthorized("Invalid credentials");
+        }
         
         //check that the password is not null
         bool isValidArgon2Hash = !string.IsNullOrWhiteSpace(request.Argon2Hash);
@@ -164,7 +181,16 @@ public class AuthController : ControllerBase
 
         //to verify credentials 
         bool isValidPassword = _bcryptService.VerifyCredential(request.Argon2Hash, user.CredentialHash);
-        if(!isValidPassword) return Unauthorized("Invalid credentials");
+        if(!isValidPassword)
+            //Author Aaron Byrne-Logging a failed login when password is incorrect
+        {
+            _logger.LogWarning(
+                "{EventType} occured because {Reason}",
+                "Login has failed",
+                "Invalid Credentials"
+                );
+            return Unauthorized("Invalid credentials");
+        }
 
 
         //collection of claims
@@ -182,7 +208,14 @@ public class AuthController : ControllerBase
             claimPrincipal
         );
 
-
+        //Author Aaron Byrne-Logging a successful login after user has signed in
+        _logger.LogInformation(
+            "User {UserId} {EventType}",
+            user.Id,
+            "Login has succeeded"
+            
+        );
+        
         return Ok();
     }
 
