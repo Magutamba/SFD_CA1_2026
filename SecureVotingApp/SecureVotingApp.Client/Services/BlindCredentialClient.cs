@@ -30,6 +30,9 @@ public class BlindCredentialClient : IBlindCredentialClient
     private BigInteger? cachedModulus;
     // cached RSA exponent estored in browser to avoid redundant key fetches
     private BigInteger? cachedExponent;
+    //RFC 9474 SHA384 PSS salt length 48 bytes 
+    private const int pssSaltLength = 48;
+    //
 
     //constructor to inject the HttpClient for making requests to the server
     public BlindCredentialClient(HttpClient httpClient)
