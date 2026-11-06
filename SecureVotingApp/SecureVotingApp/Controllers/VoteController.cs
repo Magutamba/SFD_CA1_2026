@@ -176,7 +176,7 @@ public class VoteController : ControllerBase
             // create a PSS signer with RSA engine and SHA384 digest for signature verification
             var pssSigner = new PssSigner(new RsaEngine(), new Sha384Digest(), 48);
             // initialize the PSS signer with the public key
-            pssSigner.Init(true, publicKey);
+            pssSigner.Init(false, publicKey);
             // update the PSS signer with the message bytes
             pssSigner.BlockUpdate(messageBytes, 0, messageBytes.Length);
             // verify the PSS padding of the recovered message bytes against the original electionId message
