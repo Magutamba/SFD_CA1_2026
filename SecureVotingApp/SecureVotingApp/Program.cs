@@ -4,9 +4,16 @@ using SecureVotingApp.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
+using Serilog;
 
 //registering Dependency Injection
 var builder = WebApplication.CreateBuilder(args);
+
+//Author Aaron Byrne- Registering Serilog to be our logger and sending log messages to the terminal in IDE
+builder.Services.AddSerilog((services, configuration) =>
+{
+    configuration.WriteTo.Console();
+});
 
 //back end (DI) registery (Jeán Walton)
 builder.Services.AddScoped<BcryptService>(); //hashing the argon2 
