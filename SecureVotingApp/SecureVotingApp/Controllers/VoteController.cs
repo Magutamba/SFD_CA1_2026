@@ -40,7 +40,7 @@ namespace SecureVotingApp.Controllers;
 [AllowAnonymous]
 [EnableRateLimiting("StrictPolicy")]
 //route for the votecontroller 
-[Route("api/votes")]
+[Route("api/vote")]
 
 //class for handling vote submission requests from the client
 public class VoteController : ControllerBase
