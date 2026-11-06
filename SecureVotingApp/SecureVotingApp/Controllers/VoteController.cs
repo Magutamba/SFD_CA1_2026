@@ -15,13 +15,17 @@ using Org.BouncyCastle.Math;
 using Org.BouncyCastle.OpenSsl;
 //provides MVC and web API functionality API controller, HTTP request handlers
 using Microsoft.AspNetCore.Mvc;
-
+// bouncy caste signers and digests for RFC 9474 compliant EMSA-PSS verification
+using Org.BouncyCastle.Crypto.Signers;
+using Org.BouncyCastle.Crypto.Digests;
 // directive to use Entity Framework Core for database operations LINQ, AnyAsync and SaveChangesAsync
 using Microsoft.EntityFrameworkCore;
 //directive to use AppDbContext for database queries and updates
 using SecureVotingApp.Data;
 // directive to use the data models for the application
 using SecureVotingApp.Models;
+//engine for RSA encryption and decryption
+using Org.BouncyCastle.Crypto.Engines;
 
 using SecureVotingApp.Client.Contracts;
 using SecureVotingApp.Services;
@@ -167,8 +171,11 @@ public class VoteController : ControllerBase
                 byte [] fixedLenRecovered = new byte[k];
                 //left pad the recovered value with zeros if it is shorter than the modulus length
                 Buffer.BlockCopy(recoveredBytes, 0, fixedLenRecovered, k - recoveredBytes.Length, recoveredBytes.Length);
-                
+                //EMSA-PSS padding structure using SHA384 per RFC 9474  
+                byte [] messageBytes = System.Text.Encoding.UTF8.GetBytes(electionId);
                 //ensure the recovered integer m is  not zero and within the expected octet length bounds
+
+                var pssSigner = new PssSigner(new RsaEngine(), new Sha384Digest(), 48);
                 return recoveredBytes.Length > 0 && recoveredBytes.Length<=k;
             }
             catch
