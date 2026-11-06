@@ -180,7 +180,7 @@ public class VoteController : ControllerBase
             // update the PSS signer with the message bytes
             pssSigner.BlockUpdate(messageBytes, 0, messageBytes.Length);
             // verify the PSS padding of the recovered message bytes against the original electionId message
-            return 
+            return pssSigner.VerifySignature(fixedLenRecovered);
             }
         catch
         {
