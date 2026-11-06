@@ -130,10 +130,11 @@ public class BlindCredentialClient : IBlindCredentialClient
             State = new BlindState
             {
                 BlindingValue = Base64UrlEncode(r.ToByteArrayUnsigned()),
-                MessaageRandomizer = Base64UrlEncode(messageRandomizer),
+                MessageRandomizer = Base64UrlEncode(messageRandomizer),
                 ElectionId = electionId
 
             }
+
 
         };
 
