@@ -7,22 +7,13 @@
 @rendermode @(new InteractiveWebAssemblyRenderMode(
                 prerender: false))
 
-@*directives to use cryptographic primitives such as SHA384 and RSA*@
-@using System.Security.Cryptography;
-@*directives for character encoding and decoding*@
-@using System.Text;
 <!--get the Contracts and Services*-->
 @using SecureVotingApp.Client.Contracts
 @using SecureVotingApp.Client.Services
 
-@*handle creating HTTP requests and responses*@
-@inject HttpClient Http
-@*handle page navigation *@
-@inject  NavigationManager Navigation
 @*inject the VoterAPIClient to handle voter API endpoints for requesting credentials and ballots*@
 @inject VoterApiClient VoterApiClient
-@*inject the IBlindCredentialClient to handle blind credential operations*@
-@inject IBlindCredentialClient BlindCredentialClient
+
 
 <PageTitle>Vote</PageTitle>
 
