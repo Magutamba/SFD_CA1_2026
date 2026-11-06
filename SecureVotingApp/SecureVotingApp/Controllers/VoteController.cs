@@ -83,7 +83,13 @@ public class VoteController : ControllerBase
         {
             return BadRequest("Invalid request data.");
         }
-
+        
+        //Author Aaron Byrne- Check that the voter has infact selected a voting option
+        if (string.IsNullOrWhiteSpace(request.VoteChoice))
+        {
+            return BadRequest("Invalid vote choice, please select an option");
+        }
+        
         //variable for signed credential bytes
         byte[] signatureBytes;
         try
@@ -127,7 +133,14 @@ public class VoteController : ControllerBase
             CredentialHash = credentialHash,
             SpentAt = DateTimeOffset.UtcNow
         });
-
+        
+        //Author Aaron Byrne- When a valid vote has been submitted, create a new anon ballot and save it to the database
+        dbContext.AnonBallots.Add(new AnonBallot
+        {
+            VoteChoice = request.VoteChoice,
+            ElectionId = request.ElectionId,
+        });
+        
         await dbContext.SaveChangesAsync();
 
         return Ok(new VoteReceipt
