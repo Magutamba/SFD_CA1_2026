@@ -72,19 +72,21 @@ public class BlindCredentialClient : IBlindCredentialClient
         int k = (modulus.BitLength + 7) / 8;
         //EMSA-PSS padding structure using SHA384 per RFC 9474  
         byte[] messageBytes = System.Text.Encoding.UTF8.GetBytes(electionId);
-        //
-        var pubKey = new RsaKeyParameters(false, modulus, exponent);
-        // create a PSS signer with RSA engine and SHA384 digest for signature verification
-        var pssSigner = new PssSigner(new RsaEngine(), new Sha384Digest(), 48);
-        // initialize the PSS signer with the public key
-        pssSigner.Init(true, pubKey);
-        // update the PSS signer with the message bytes
-        pssSigner.BlockUpdate(messageBytes, 0, messageBytes.Length);
-        // generate the PSS encoded signature bytes for the electionId message
-        byte[] pssEncodedBytes = pssSigner.GenerateSignature();
-
+        // add SHA384 to variable sha384 to use compute HASH encoded message bytes
+        using var sha384 = SHA384.Create();
+        //hash the electionId message using SHA384 to create a fixed length digest
+        byte[] hashedMessage = sha384.ComputeHash(messageBytes);
         //converts the pss encoded message bytes into a positive BigInteger m for RSA arithmetic 
-        var m = new BigInteger(1, pssEncodedBytes);
+        var m = new BigInteger(1, hashedMessage);
+        // var pubKey = new RsaKeyParameters(false, modulus, exponent);
+        // // create a PSS signer with RSA engine and SHA384 digest for signature verification
+        // var pssSigner = new PssSigner(new RsaEngine(), new Sha384Digest(), 48);
+        // // initialize the PSS signer with the public key
+        // pssSigner.Init(false, pubKey);
+        // // update the PSS signer with the message bytes
+        // pssSigner.BlockUpdate(messageBytes, 0, messageBytes.Length);
+        // // generate the PSS encoded signature bytes for the electionId message
+        // byte[] pssEncodedBytes = pssSigner.GenerateSignature();
 
         //declare a variable to hold the blinding factor r, while ensuring it is coprime to the RSA modulus N
         BigInteger r;
@@ -101,7 +103,7 @@ public class BlindCredentialClient : IBlindCredentialClient
         //compute the blinded credential as m' = m * r^e mod N
         BigInteger blindedNum = m.Multiply(rToE).Mod(modulus);
 
-        // * FIXED: use the blinded number created above.
+        // use the blinded number created above.
         byte[] blindedBytes = blindedNum.ToByteArrayUnsigned();
         //fixed byte array of length k to match the RSA modulus length
         byte[] fixedLenBlinded = new byte[k];
