@@ -61,6 +61,7 @@
             MemorySize = 19456,
             Iterations = 1
         };
+        // Retrieve hashed password given saved salt and convert to string for request payload
         var hash = await argon2.GetBytesAsync(32);
         var argon2Hash  = Convert.ToBase64String(hash);
         
@@ -72,6 +73,7 @@
             Code = _request.Code
         };
         
+        // Login API call
         using var response = await Http.PostAsJsonAsync(
             "api/auth/login",
             userPayload);
@@ -84,9 +86,13 @@
         {
             _message = "Too many requests. Please try again later";
         }
+        else if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized)
+        {
+            _message = await response.Content.ReadAsStringAsync();
+        }
         else
         {
-            _message = "Invalid credentials. Please try again";
+            _message = "Service Error: Please try again later.";
         }
         
         _isSubmitting = false;
@@ -115,7 +121,6 @@
             _message = $"Error retrieving details: {await saltResponse.Content.ReadAsStringAsync()}. ";
             return "";
         }
-        
         
         var saltResult = await saltResponse.Content.ReadFromJsonAsync<SaltResponse>();
 
