@@ -223,7 +223,7 @@
 
         if (response.IsSuccessStatusCode)
         {
-            _confirmMessage = "Account Registration Completed - Please Login.";
+            _confirmRegistration = false;
             _registrationComplete = true;
         }
         else if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized or HttpStatusCode.Conflict)
