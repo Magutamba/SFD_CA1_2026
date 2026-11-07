@@ -46,7 +46,7 @@
         <div class="modal show d-block" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
-
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseConfirmRegistrationModal"></button>
                     <div class="modal-header text-center">
                         <h5 class="modal-title">Set up Two-Factor Authentication</h5>
                     </div>
@@ -54,9 +54,13 @@
                     <div class="modal-body text-center">
                         <img src="@_qrImage" alt="2FA QR Code" width="250" height="250"/><br/><br/>
                         <label>2FA Code:</label><br/>
-                        <InputText @bind-Value="_confirmRequest.Code"/><br/>
+                        <InputText @bind-Value="_confirmRequest.Code" maxlength="6" minlength="6"/><br/>
                         <button type="submit" disabled="@_isSubmitting">Confirm Registration</button><br/>
                     </div>
+                    @if (_confirmMessage is not null)
+                    {
+                        <p role="status">@_confirmMessage</p>
+                    }
                     <div class="modal-body">
 
                         <p>In-order to complete registration, it is required that your account has two-factor authentication enabled.</p>
@@ -69,10 +73,6 @@
                         </ol>
                         <p>Authenticator app will generate a new code every 30 seconds. Please enter the currently displayed code whenever you sign in.</p>
                         <p role="alertdialog"><b>Important:</b> never share your authentication code with anyone.</p>
-                        @if (_message is not null)
-                        {
-                            <p role="status">@_message</p>
-                        }
                     </div>
                 </div>
             </div>
@@ -114,6 +114,7 @@
 @code {
     private readonly RegisterRequest _request = new(); // Initial registration request object
     private string? _message;
+    private string? _confirmMessage;
     private bool _isSubmitting; // if this value is true - the submit button is disabled
     private bool _confirmRegistration;
     private ConfirmRegistrationRequest _confirmRequest = new(); // Confirmation registration request object - requires 2FA
@@ -222,19 +223,24 @@
 
         if (response.IsSuccessStatusCode)
         {
-            _message = "Account Registration Completed - Please Login.";
+            _confirmMessage = "Account Registration Completed - Please Login.";
             _registrationComplete = true;
         }
         else if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized or HttpStatusCode.Conflict)
         {
-            _message = await response.Content.ReadAsStringAsync();
+            _confirmMessage = await response.Content.ReadAsStringAsync();
         }
         else
         {
-            _message = "Service Error: Please try again later.";
+            _confirmMessage = "Service Error: Please try again later.";
         }
 
         _isSubmitting = false;
+    }
+
+    private void CloseConfirmRegistrationModal()
+    {
+        _confirmRegistration = false;
     }
     
     // Registration complete button calls this method to redirect user to login page

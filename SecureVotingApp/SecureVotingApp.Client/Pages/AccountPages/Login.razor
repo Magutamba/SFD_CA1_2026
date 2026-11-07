@@ -11,7 +11,7 @@
 
 <h3>Login Account</h3>
 
-<!--Edit Form used to bind LoginRequest model to form details. Check LoginRequest for property specific data anotations-->
+<!--Edit Form used to bind LoginRequest model to form details. Check LoginRequest for property specific data annotations-->
 <EditForm Model="_request" FormName="AccountLogin" OnValidSubmit="LoginAsync">
     <label>Email</label><br/>
     <InputText @bind-Value="_request.Email"/><br/>
@@ -19,7 +19,7 @@
     <label>Password</label><br/>
     <InputText type="password" @bind-Value="_request.Password"/><br/>
     <label>2FA Code</label><br/>
-    <InputText type="password" @bind-Value="_request.Code"/><br/>
+    <InputText @bind-Value="_request.Code" maxlength="6"/><br/>
     <button type="submit" disabled="@_isSubmitting">Login</button>
     
     <DataAnnotationsValidator/>
