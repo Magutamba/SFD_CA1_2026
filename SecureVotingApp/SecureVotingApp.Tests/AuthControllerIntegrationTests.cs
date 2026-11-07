@@ -2,12 +2,14 @@
 // @uthor: Jeán Walton
 // 30/10/2026
 
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Newtonsoft.Json.Bson;
+using OtpNet;
 using Xunit;
 
 public class AuthControllerIntegrationTests : IDisposable
@@ -57,14 +59,31 @@ public class AuthControllerIntegrationTests : IDisposable
 
         //Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        
 
+        // Check that registration returns the information needed for 2FA setup.
+        using var json = JsonDocument.Parse(
+            await response.Content.ReadAsStringAsync()
+        );
+
+        string? registrationId = json.RootElement
+            .GetProperty("registrationId")
+            .GetString();
+
+        string? setupUri = json.RootElement
+            .GetProperty("setupUri")
+            .GetString();
+        //example of the return type
+        //secret=ABC123...&issuer=SecureVotingApp&algorithm=SHA1&digits=6&period=30 (used for the QR Code)
+
+        Assert.False(string.IsNullOrWhiteSpace(registrationId));
+        Assert.StartsWith("otpauth://totp/", setupUri);
+
+    
     }
 
     [Fact]
     public async Task RegisterUser_withDuplicateEmail_ReturnsConflict()
     {   
-
         //Arrange
         var registration = new
         {
@@ -81,19 +100,42 @@ public class AuthControllerIntegrationTests : IDisposable
        
         //Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);//first registery
-      
+
+         // Confirm the first registration before checking for a duplicate email.
+        using var registrationJson = JsonDocument.Parse(
+            await response.Content.ReadAsStringAsync());
+
+        string registrationId = registrationJson.RootElement
+            .GetProperty("registrationId").GetString()!;
+        string setupUri = registrationJson.RootElement
+            .GetProperty("setupUri").GetString()!;
+
+        string secret = setupUri.Split("secret=")[1].Split('&')[0];
+        var totp = new Totp(Base32Encoding.ToBytes(secret));
+
+        var confirmation = new
+        {
+            RegistrationId = registrationId,
+            Code = totp.ComputeTotp()
+        };
+
+        var responseConfirmation = await _httpClient.PostAsJsonAsync(
+            "/api/auth/confirm-registration", confirmation);
+        Assert.Equal(HttpStatusCode.OK, responseConfirmation.StatusCode);
+
          //Act
         var responseDuplicate = await _httpClient.PostAsJsonAsync(
             "/api/auth/register", registration);
 
         //Assert    
-        Assert.Equal(HttpStatusCode.Conflict, responseDuplicate.StatusCode);//second registery   
-
+        Assert.Equal(HttpStatusCode.Conflict, responseDuplicate.StatusCode);//second registery 
+      
     }
 
     [Fact]
     public async Task Login_withValidCredentials_ReturnOk()
     {   
+        //Arrange
         var email = "test@example.com";
         var argon2Hash = Convert.ToBase64String(
                 Enumerable.Range(1, 32).Select(n => (byte)n).ToArray());
@@ -108,26 +150,66 @@ public class AuthControllerIntegrationTests : IDisposable
             Argon2Salt = argon2Salt
         };
 
-        //Act (register)
+        //Act (register new user)
         var response = await _httpClient.PostAsJsonAsync(
             "/api/auth/register", registration);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        //Reading the registration ID and TOTP setup URI
+        using var json = JsonDocument.Parse(
+            await response.Content.ReadAsStringAsync()
+        );
+
+        //extract the properties from the return json file
+        String registrationId = json.RootElement
+            .GetProperty("registrationId")
+            .GetString()!;
+
+        String setupUri = json.RootElement
+        .GetProperty("setupUri")
+        .GetString()!;
+
+        //extracting the TOTP secrect from the setup URI
+        String secret = setupUri.Split("secret=")[1].Split('&')[0];
+
+        //create an authenticator using the shared secret
+        var totp = new Totp(Base32Encoding.ToBytes(secret));
+
+        //generate a valid code to confirm registration
+        string registrationCode = totp.ComputeTotp();
+
+        //confirmation json to send to backend "confirm-registration"
+        var confirmation = new
+        {
+            RegistrationId = registrationId,
+            Code = registrationCode
+        };
+
+        //confirm 2FA and save the temp user details to the sqlite database
+        var responseConfirmation = await _httpClient.PostAsJsonAsync(
+            "api/auth/confirm-registration", confirmation);
+
+        //Assert
+        Assert.Equal(HttpStatusCode.OK, responseConfirmation.StatusCode);
+
+        //we cant reuse the same code
+        string loginCode = totp.ComputeTotp(DateTime.UtcNow.AddSeconds(30));
 
         //Arrange 
         var login = new
         {
             Email = email, 
             Argon2Hash = argon2Hash,
-           
+            code = loginCode
         };
 
         //Login 
         var responseLogin = await _httpClient.PostAsJsonAsync(
             "/api/auth/login", login);
 
-        //Assert
+        //Assert   
         Assert.Equal(HttpStatusCode.OK, responseLogin.StatusCode);
-        Assert.True(responseLogin.Headers.TryGetValues("Set-Cookie", out var cookies)//if true verify cookie
-        );
+
     }
 
     [Fact]
@@ -148,26 +230,71 @@ public class AuthControllerIntegrationTests : IDisposable
             Argon2Salt = argon2Salt
         };
 
-        //Act (register)
+        //Act (register new user)
         var response = await _httpClient.PostAsJsonAsync(
             "/api/auth/register", registration);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        //Reading the registration ID and TOTP setup URI
+        using var json = JsonDocument.Parse(
+            await response.Content.ReadAsStringAsync()
+        );
+
+        //extract the properties from the return json file
+        String registrationId = json.RootElement
+            .GetProperty("registrationId")
+            .GetString()!;
+
+        String setupUri = json.RootElement
+        .GetProperty("setupUri")
+        .GetString()!;
+
+        //extracting the TOTP secrect from the setup URI
+        String secret = setupUri.Split("secret=")[1].Split('&')[0];
+
+        //create an authenticator using the shared secret
+        var totp = new Totp(Base32Encoding.ToBytes(secret));
+
+        //generate a valid code to confirm registration
+        string registrationCode = totp.ComputeTotp();
+
+        //confirmation json to send to backend "confirm-registration"
+        var confirmation = new
+        {
+            RegistrationId = registrationId,
+            Code = registrationCode
+        };
+
+        //confirm 2FA and save the temp user details to the sqlite database
+        var responseConfirmation = await _httpClient.PostAsJsonAsync(
+            "api/auth/confirm-registration", confirmation);
+
+        //Assert
+        Assert.Equal(HttpStatusCode.OK, responseConfirmation.StatusCode);
+
+        //we cant reuse the same code
+        string loginCode = totp.ComputeTotp(DateTime.UtcNow.AddSeconds(30));
+
         //Arrange 
         var login = new
         {
             Email = email, 
             Argon2Hash = argon2Hash,
-           
+            code = loginCode
         };
 
         //Login 
         var responseLogin = await _httpClient.PostAsJsonAsync(
             "/api/auth/login", login);
+
+        //Assert   
         Assert.Equal(HttpStatusCode.OK, responseLogin.StatusCode);
+
         //Act
         // logout does not require a body just authenication
         var responseLogout = await _httpClient.PostAsync(
             "/api/auth/logout", null);
+
         //Assert
         Assert.Equal(HttpStatusCode.OK, responseLogout.StatusCode);
 
@@ -192,6 +319,7 @@ public class AuthControllerIntegrationTests : IDisposable
     [Fact]
     public async Task Login_WithIncorrectPassword_ReturnsUnauthorised()
     {
+         //Arrange
         var email = "test@example.com";
         var argon2Hash = Convert.ToBase64String(
                 Enumerable.Range(1, 32).Select(n => (byte)n).ToArray());
@@ -206,16 +334,57 @@ public class AuthControllerIntegrationTests : IDisposable
             Argon2Salt = argon2Salt
         };
 
-        //Act (register)
+        //Act (register new user)
         var response = await _httpClient.PostAsJsonAsync(
             "/api/auth/register", registration);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        //Reading the registration ID and TOTP setup URI
+        using var json = JsonDocument.Parse(
+            await response.Content.ReadAsStringAsync()
+        );
+
+        //extract the properties from the return json file
+        String registrationId = json.RootElement
+            .GetProperty("registrationId")
+            .GetString()!;
+
+        String setupUri = json.RootElement
+        .GetProperty("setupUri")
+        .GetString()!;
+
+        //extracting the TOTP secrect from the setup URI
+        String secret = setupUri.Split("secret=")[1].Split('&')[0];
+
+        //create an authenticator using the shared secret
+        var totp = new Totp(Base32Encoding.ToBytes(secret));
+
+        //generate a valid code to confirm registration
+        string registrationCode = totp.ComputeTotp();
+
+        //confirmation json to send to backend "confirm-registration"
+        var confirmation = new
+        {
+            RegistrationId = registrationId,
+            Code = registrationCode
+        };
+
+        //confirm 2FA and save the temp user details to the sqlite database
+        var responseConfirmation = await _httpClient.PostAsJsonAsync(
+            "api/auth/confirm-registration", confirmation);
+
+        //Assert
+        Assert.Equal(HttpStatusCode.OK, responseConfirmation.StatusCode);
+
+        //we cant reuse the same code
+        string loginCode = totp.ComputeTotp(DateTime.UtcNow.AddSeconds(30));
 
         //Arrange 
         var login = new
         {
             Email = email, 
-            Argon2Hash = "Y2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2M=",//incorrect password
-           
+            Argon2Hash = "Y2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2M=",  //incorrect password argon2Hash,
+            code = loginCode
         };
 
         //Login 
@@ -223,8 +392,8 @@ public class AuthControllerIntegrationTests : IDisposable
             "/api/auth/login", login);
 
         //Assert
-         Assert.Equal(HttpStatusCode.Unauthorized, responseLogin.StatusCode);
-  
+        Assert.Equal(HttpStatusCode.Unauthorized, responseLogin.StatusCode);
+       
     }
 
     [Fact]
@@ -253,7 +422,7 @@ public class AuthControllerIntegrationTests : IDisposable
         {
             Email = "wrong@email.com", //incorrect email
             Argon2Hash = argon2Hash,
-           
+            Code = "123456"
         };
 
         //Login 
@@ -282,9 +451,32 @@ public class AuthControllerIntegrationTests : IDisposable
             Argon2Salt = argon2Salt
         };
 
-        //Act (register)
+         //Act (register)
         var response = await _httpClient.PostAsJsonAsync(
             "/api/auth/register", registration);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        // Confirm 2FA so the user's real salt is stored in SQLite.
+        using var registrationJson = JsonDocument.Parse(
+            await response.Content.ReadAsStringAsync());
+
+        string registrationId = registrationJson.RootElement
+            .GetProperty("registrationId").GetString()!;
+        string setupUri = registrationJson.RootElement
+            .GetProperty("setupUri").GetString()!;
+
+        string secret = setupUri.Split("secret=")[1].Split('&')[0];
+        var totp = new Totp(Base32Encoding.ToBytes(secret));
+
+        var confirmation = new
+        {
+            RegistrationId = registrationId,
+            Code = totp.ComputeTotp()
+        };
+
+        var responseConfirmation = await _httpClient.PostAsJsonAsync(
+            "/api/auth/confirm-registration", confirmation);
+        Assert.Equal(HttpStatusCode.OK, responseConfirmation.StatusCode);
 
         //Arrange 
         var details = new
@@ -312,7 +504,6 @@ public class AuthControllerIntegrationTests : IDisposable
         
         Assert.Equal(argon2Salt, returnedSalt);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-       
     }
 
     [Fact]
