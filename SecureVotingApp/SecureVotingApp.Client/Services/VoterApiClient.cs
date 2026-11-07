@@ -80,6 +80,7 @@ public class VoterApiClient
         {
             ElectionId = credentialResponse.ElectionId,
             AnonymousCredential = anonymousCredential,
+            MessageRandomizer = blindRequest.State.MessageRandomizer,
             VoteChoice = string.Empty,
             CredentialExpiresAt = credentialResponse.CredentialExpiresAt,
         };
@@ -105,7 +106,7 @@ public class VoterApiClient
         //using  var ensures memory and headers are automatically disposed once executed
         using var request = new HttpRequestMessage(
             HttpMethod.Post,
-            $"api/votes");
+            $"api/vote");
 
         //login cookie not needed for submission of vote
         request.SetBrowserRequestCredentials(
@@ -118,6 +119,7 @@ public class VoterApiClient
             {
                 ElectionId = session.ElectionId,
                 AnonymousCredential = session.AnonymousCredential,
+                MessageRandomizer = session.MessageRandomizer,
                 VoteChoice = voteChoice,
             }
 

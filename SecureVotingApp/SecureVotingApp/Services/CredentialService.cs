@@ -31,18 +31,23 @@ public class CredentialService
     {
 
         //if userId is invalid or electionI
-        if(userId<=0)
+        if (userId <= 0)
         {
             throw new InvalidOperationException("Invalid userId");
         }
 
-        if(string.IsNullOrWhiteSpace(electionId))
+        if (string.IsNullOrWhiteSpace(electionId))
         {
 
             throw new InvalidOperationException("Invalid electionId");
         }
+        //validate request
+        if (request == null)
+        {
+            throw new InvalidOperationException("Invalid Credential request.");
+        }
         //ensure electionId match
-        if(request.ElectionId != electionId)
+        if (request.ElectionId != electionId)
         {
             throw new InvalidOperationException("The election id does not match");
         }
@@ -59,15 +64,25 @@ public class CredentialService
             throw new InvalidOperationException("Could not reserve credentials");
 
         }
+        string signedValue;
+        try
+        {
+            //sign the blinded credential using the server private signing key
+            signedValue = credentialSigner.SignBlindedCredential(request.BlindedCredential);
 
-        //sign the blinded credential using the server private signing key
-        string signedValue = credentialSigner.SignBlindedCredential(request.BlindedCredential);
-        
+        }
+        catch
+        {
+            //release the reserved credential only if signing fails
+            await stateStore.ReleaseIssuedCredentialAsync(userId, electionId);
+            throw;
+        }
+        //keep the issued credential for the after successful signing
         return new CredentialResponse
         {
             ElectionId = electionId,
             SignedBlindedCredential = signedValue,
-            Choices = new List<string> {"Yes", "No"},
+            Choices = new List<string> { "Yes", "No" },
             CredentialExpiresAt = DateTimeOffset.UtcNow.AddHours(1)
         };
 

@@ -26,7 +26,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<User>()
                     .HasIndex(user => user.Email)
                     .IsUnique();
-        //@author Moïse a user can only receive one credential for the same election
+        //@author Moïse a user can only receive one credential for the same election, unique prevent concurrency issues
         modelBuilder.Entity<IssuedCredential>()
                     .HasIndex(credential => new
                     {
@@ -35,7 +35,7 @@ public class AppDbContext : DbContext
                     })
                     .IsUnique();
 
-        // @author Moïse an anonymous credential can only be spent once during the election
+        // @author Moïse an anonymous credential can only be spent once during the election, unique to prevent concurrency issues
         modelBuilder.Entity<SpentCredential>()
                     .HasIndex(credential => new
                     {

@@ -18,6 +18,8 @@ using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Math;
 //utility class for converting between byte arrays and BigInteger PEM file parsing
 using Org.BouncyCastle.OpenSsl;
+using System.Security.Cryptography;
+using Org.BouncyCastle.Security;
 
 //namespace for grouping services components together
 namespace SecureVotingApp.Services;
@@ -54,6 +56,11 @@ public class CredentialSigner
                 "The file does not contain a valid RSA private key."
             )
         };
+        //ensure the RSA key is at least 2048 bits long for security
+        if(privateKey.Modulus.BitLength < 2048)
+        {
+            throw new CryptographicException("RSA signing keys must be at least 2048 bits long.");
+        }
     }
 
     // returns the public key for verification of the signed blinded credential
@@ -70,38 +77,57 @@ public class CredentialSigner
         byte[] blindedBytes = Base64UrlDecoder(blindedCredential);
         //compute the modulus length in bytes from RSA private key bit length rounding to nearest byte
         int modulusLen = (privateKey.Modulus.BitLength + 7) / 8;
-        //ensure blinded octet length equals RSA modulus length to prevent malleability attacks
+        //checks blinded credential length equals RSA modulus length to prevent malleability attacks
         if (blindedBytes.Length != modulusLen)
         {
-            throw new InvalidOperationException("The blinded credential is out of RSA modulus length");
+            throw new CryptographicException("The blinded credential is out of RSA modulus length");
         }
 
         //decode the bytes as a positive RSA integer
         var blindNum = new BigInteger(1, blindedBytes);
 
+        //retrieves the RSA modulus
+        BigInteger modulus = privateKey.Modulus;
+
         //reject values outside the RSA range
-        if (blindNum.CompareTo(BigInteger.One) < 0 || blindNum.CompareTo(privateKey.Modulus) >= 0)
+        if (blindNum.CompareTo(BigInteger.Zero) <= 0 || blindNum.CompareTo(privateKey.Modulus) >= 0)
         {
-            throw new InvalidOperationException(
+            throw new CryptographicException(
                 "The blinded credential is invalid or out range for RSA modulus."
             );
         }
+        //use RSA blinding for private key operations to prevent timing attacks and information leak through repeated signing operations
+        var rsaEngine = new RsaBlindedEngine();
+        //cryptographycally secure random source for blinding factor generation
+        var random = new SecureRandom();
+        //initialize the engine for the private RSA operations
+        rsaEngine.Init(true, new ParametersWithRandom(privateKey, random));
 
-        //RFC 9474 signing mathperform RSA signed blinding operation 
-        var signedBlindNum = blindNum.ModPow(privateKey.Exponent, privateKey.Modulus);
+        //perform the raw RSA private operation on the blinded credential to produce a signed blinded credential
+        byte[] signedBytes = rsaEngine.ProcessBlock(blindedBytes,0, blindedBytes.Length);
+
+        //convert the signed blinded credential bytes into a positive BigInteger for RSA arithmetic
+        var signedBlindNum = new BigInteger(1, signedBytes);
+
+        //verify the RSA private operation using the public key
+        BigInteger verificationNum = signedBlindNum.ModPow(privateKey.PublicExponent,modulus);
+        //reject the result if the RSA operation failed the fault check
+        if (!verificationNum.Equals(blindNum))
+        {
+            throw new CryptographicException("RSA signing operation failed verification.");
+        }
+
+        //checks that the result matches the RSA modulus length
+        if(signedBlindNum.CompareTo(BigInteger.Zero) <=0 || signedBlindNum.CompareTo(modulus)>=0)
+        {
+            throw new CryptographicException("Invalid RSA signature length.");
+        }
         //fixed length byte array same length as RSA modulus
         byte[] fixedLenSigned = new byte[modulusLen];
-
-        //convert the signed value to a fixed RSA byte array
-        //1 ensures value is positive regardless of high bit value
-        //int modulusLen = (privateKey.Modulus.BitLength + 7) / 8;
-
-        //convert the signed BigInteger to a unsigned byte array to match RSA modulus length
-        byte[] signedBytes = signedBlindNum.ToByteArrayUnsigned();
-
-
-        //left pad the signed value with zeros if it is shorter than the modulus length
-        Buffer.BlockCopy(signedBytes, 0, fixedLenSigned, modulusLen - signedBytes.Length, signedBytes.Length);
+        //convert the signature to unsigned byte array for transmission to the client
+        byte[] unsignedBytes = signedBlindNum.ToByteArrayUnsigned();
+        //left pad the signature to the required length
+        Buffer.BlockCopy(unsignedBytes,0, fixedLenSigned, modulusLen - unsignedBytes.Length, unsignedBytes.Length);
 
         //return a signed blind credential to the client
         return Base64UrlEncoder(fixedLenSigned);
@@ -128,3 +154,4 @@ public class CredentialSigner
 
     }
 }
+

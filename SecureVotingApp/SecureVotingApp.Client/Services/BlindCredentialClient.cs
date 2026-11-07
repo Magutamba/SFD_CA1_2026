@@ -18,6 +18,7 @@ using Org.BouncyCastle.Crypto.Digests;
 using Org.BouncyCastle.Math;
 //engine for RSA encryption and decryption
 using Org.BouncyCastle.Crypto.Engines;
+using SecureVotingApp.Client.Contracts;
 //logical namespace for grouping services components together
 namespace SecureVotingApp.Client.Services;
 
@@ -34,6 +35,8 @@ public class BlindCredentialClient : IBlindCredentialClient
     private const int PSS_SaltLength = 48;
     //RFC 9474 randomized message prefix is 32 bytes
     private const int RandomizerLength = 32;
+    //minimum RSA modulus length
+    private const int MinRsaBitLength = 2048;
 
 
     //constructor to inject the HttpClient for making requests to the server
@@ -58,14 +61,33 @@ public class BlindCredentialClient : IBlindCredentialClient
         byte[] modulusBytes = Base64UrlDecode(pubKeyDTO.Modulus);
         byte[] exponentBytes = Base64UrlDecode(pubKeyDTO.Exponent);
 
+        BigInteger modulus = new BigInteger(1, modulusBytes);
+        BigInteger exponent = new BigInteger(1, exponentBytes);
+        //validate RSA modulus length
+        if(modulus.BitLength <MinRsaBitLength || modulus.IsEven)
+        {
+            throw new CryptographicException("RSA modulus must be odd and at least 2048 bits.");
+        }
+        //validate public exponent
+        if(exponent.CompareTo(BigInteger.ValueOf(3)) <0 || exponent.IsEven || exponent.CompareTo(modulus)>=0)
+        {
+            throw new CryptographicException("Invalid RSA public exponent.");
+        }
+
+
+
         //conver the raw byte arrays into positive BigInteger values for RSA arithmetic
-        cachedModulus = new BigInteger(1, modulusBytes);
-        cachedExponent = new BigInteger(1, exponentBytes);
+        cachedModulus = modulus;
+        cachedExponent = exponent;
     }
 
     //generates a blinded voting credential asynchronously for the specified election
     public async Task<BlindCredentialRequest> CreateBlindedCredentialAsync(string electionId)
     {
+        if (string.IsNullOrWhiteSpace(electionId))
+        {
+            throw new InvalidOperationException("ElectionId is required.");
+        }
         //ensure the RSA public key parameters (modulus and exponent) are loaded and cached in memory
         await PublicKeyLoadedAsync();
 
@@ -86,15 +108,11 @@ public class BlindCredentialClient : IBlindCredentialClient
         //copies the electionId after the randomizer prefix in the prepared message
         Buffer.BlockCopy(messageBytes, 0, preparedMessage, RandomizerLength, messageBytes.Length);
 
-        // add SHA384 to variable sha384 to use compute HASH encoded message bytes
-        using var sha384 = SHA384.Create();
-        //hash the electionId message using SHA384 to create a fixed length digest
-        byte[] hashedMessage = sha384.ComputeHash(messageBytes);
         //public key parameters for RSA signature verification using BouncyCastle, false indicates it is a public key
         var pubKey = new RsaKeyParameters(false, modulus, exponent);
 
 
-        //declare a variable to hold the blinding factor r, while ensuring it is coprime to the RSA modulus N
+        //declare a variable to hold the inverse blinding factor r, while ensuring it is coprime to the RSA modulus N
         BigInteger r;
         do
         {
@@ -107,8 +125,8 @@ public class BlindCredentialClient : IBlindCredentialClient
 
         //RSA blinding parameters using public key and random blinding factor
         var blindingParams = new RsaBlindingParameters(pubKey, r);
-        //create a PSS  signer using RSA blinding and sha384 digest
-        var pssSigner = new PssSigner(new RsaBlindingEngine(), new Sha384Digest(), RandomizerLength);
+        //create a PSS  signer using RSA blinding and sha384 digest, MGF1(mark generation function 1) byte mask obsucre prepared message and salt
+        var pssSigner = new PssSigner(new RsaBlindingEngine(), new Sha384Digest(), new Sha384Digest(), PSS_SaltLength);
         //initialize the PSS encoding and RSA blinding
         pssSigner.Init(true, blindingParams);
         //add the prepared message to the PSS signer for blinding and signing
@@ -144,35 +162,96 @@ public class BlindCredentialClient : IBlindCredentialClient
     public async Task<string> UnblindCredentialAsync(string signedBlindedCredential, BlindState state)
     {
         await PublicKeyLoadedAsync();
-
+        //reject missing state
+        if(state == null || string.IsNullOrWhiteSpace(state.BlindingValue)
+                  || string.IsNullOrWhiteSpace(state.MessageRandomizer)||
+                     string.IsNullOrWhiteSpace(state.ElectionId))
+        {
+            throw new InvalidOperationException("Invalid blind state");
+        }
+        //retrieve the cached RSA modulus
         BigInteger modulus = cachedModulus!;
-
-        //convert the base64 url encoded signed blinded credential to a byte array
+        // calculate the RSA modulus byte length k rounding bits to full octet
+        int k = (modulus.BitLength + 7) / 8;
+        //decode the base64 url encoded signed blinded credential to a byte array
         byte[] signedBytes = Base64UrlDecode(signedBlindedCredential);
-
-        //converts the base64 url encoded blinding value to a byte array
+        //checks returned signature as expected length
+        if (!signedBytes.Length.Equals(k))
+        {
+            throw new CryptographicException("Invalid signed blinded credential length");
+        }
+        //decode the base64 url encoded blinding value to a byte array
         byte[] rBytes = Base64UrlDecode(state.BlindingValue);
+        //validate the blinding value
+        if(rBytes.Length > k)
+        {
+            throw new CryptographicException("Invalid blinding factor length");
+        }
+
+        // convert the blinding value bytes into a positive BigInteger r for RSA arithmetic
+        BigInteger r = new BigInteger(1, rBytes);
+        //check if that the blinding value is valid and coprime to the RSA modulus N
+        if(r.CompareTo(BigInteger.One)<0 || r.CompareTo(modulus)>=0 || !r.Gcd(modulus).Equals(BigInteger.One))
+        {
+            throw new CryptographicException("Invalid blinding value");
+        }
 
         // convert the signed blinded credential bytes into a positive BigInteger s' for RSA arithmetic
-        var sPrime = new BigInteger(1, signedBytes);
-
+        BigInteger sPrime = new BigInteger(1, signedBytes);
+        //reject a signed representative is outside the RSA range
+        if(sPrime.CompareTo(BigInteger.Zero)<=0 || sPrime.CompareTo(modulus) >= 0)
+        {
+            throw new CryptographicException("Invalid signed blinded credential");
+        }
         //ublinding math
-        // convert the blinding value bytes into a positive BigInteger r for RSA arithmetic
-        var r = new BigInteger(1, rBytes);
-
         // compute the modular inverse of the blinding factor r with respect to the RSA modulus N
         BigInteger rInverse = r.ModInverse(modulus);
         // compute the unblinded credential as m = s' * r^(-1) mod N
         BigInteger unBlindedNum = sPrime.Multiply(rInverse).Mod(modulus);
-        // calculate the RSA modulus byte length k rounding bits to full octet
-        int k = (modulus.BitLength + 7) / 8;
         //convert the unblinded integer back to a fixed length byte array
         byte[] unBlindedBytes = unBlindedNum.ToByteArrayUnsigned();
+        //ensure the result cannot exceed the RSA modulus length
+        if(unBlindedBytes.Length > k)
+        {
+            throw new CryptographicException("Invalid unblinded credential length");
+        }
         // create a fixed length byte array of length k to match the RSA key modulus byte length
         byte[] fixedLenUnBlinded = new byte[k];
         //left pad the unblinded value with zeros if it is shorter than the modulus length
         Buffer.BlockCopy(unBlindedBytes, 0, fixedLenUnBlinded, k - unBlindedBytes.Length, unBlindedBytes.Length);
+        
+        //retrive the original electionId as UTF8 bytes
+        byte[] messageBytes = System.Text.Encoding.UTF8.GetBytes(state.ElectionId);
 
+        //ensure message prefix is 32 bytes exaclty
+        byte[] randomizer = Base64UrlDecode(state.MessageRandomizer);
+        if(randomizer.Length !=RandomizerLength)
+        {   
+            throw new CryptographicException("Invalid message randomizer");
+        }
+        //reconstruct original prepared message
+        byte[] preparedMessage = new byte[RandomizerLength + messageBytes.Length];
+
+        //copy randomized prefix into prepared message
+        Buffer.BlockCopy(randomizer,0, preparedMessage,0, randomizer.Length );
+
+        //append the electionId to the prepared message
+        Buffer.BlockCopy(messageBytes,0, preparedMessage, RandomizerLength, messageBytes.Length);
+        //retrieve the public key for signature verification
+        var pubKey = new RsaKeyParameters(false, modulus, cachedExponent);
+        //create a PSS signer with RSA engine and SHA384 digest to verify the unblinded credential signature
+        var verifier = new PssSigner(new RsaEngine(), new Sha384Digest(), new Sha384Digest(),  PSS_SaltLength);
+
+        //intialize signature verification with the public key
+        verifier.Init(false,pubKey);
+
+        //supply the original prepard message
+        verifier.BlockUpdate(preparedMessage,0, preparedMessage.Length);
+        //verifies the unblinded credential before returning it to the client
+        if (!verifier.VerifySignature(fixedLenUnBlinded))
+        {
+            throw new CryptographicException("Unblinded credential verification failed");
+        }
         // return the unblinded credential as a base64 url encoded string to the client
         return Base64UrlEncode(fixedLenUnBlinded);
     }
@@ -184,6 +263,11 @@ public class BlindCredentialClient : IBlindCredentialClient
     //helper method to decode base64 url encoded string into a byte array
     private static byte[] Base64UrlDecode(string data)
     {
+        //reject empty or null encoded data Base64 
+        if (string.IsNullOrWhiteSpace(data))
+        {
+            throw new FormatException("Invalid Base64 input");
+        }
         string padded = data.Replace('-', '+').Replace('_', '/');
         padded += new string('=', (4 - padded.Length % 4) % 4);
         return Convert.FromBase64String(padded);

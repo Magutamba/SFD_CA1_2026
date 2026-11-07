@@ -69,5 +69,28 @@ public class CredentialStateStore
             return false;
         }
     }
-
+    //release an issued credential if signing fails before successful issuance
+    public async Task ReleaseIssuedCredentialAsync(int userId,string electionId)
+    {
+        var issuedCredential = await dbContext.IssuedCredentials.FirstOrDefaultAsync(
+                ic => ic.UserId == userId && ic.ElectionId == electionId
+        );
+        //nothing to release  if no credential exists
+        if (issuedCredential != null)
+        {
+            //remove the issued credential from the database
+            dbContext.IssuedCredentials.Remove(issuedCredential);
+            try
+            {
+                //save changes to the database
+                await dbContext.SaveChangesAsync();
+            }
+            catch
+            {
+                //detach the entry if concurrent operations modified the database to prevent tracking issues
+                dbContext.Entry(issuedCredential).State = EntityState.Detached;
+                throw;
+            }
+        }
+    }
 }
