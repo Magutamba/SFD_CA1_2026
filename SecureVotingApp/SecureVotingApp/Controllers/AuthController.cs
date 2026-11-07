@@ -46,7 +46,7 @@ public class AuthController : ControllerBase
     
     private EmailAddressAttribute emailChecker = new EmailAddressAttribute();
 
-        public AuthController(BcryptService bcryptService, AppDbContext dbContext, ILogger<AuthController> logger, TotpService totpService, PendingRegistrationService pendingRegistrationService)
+    public AuthController(BcryptService bcryptService, AppDbContext dbContext, ILogger<AuthController> logger, TotpService totpService, PendingRegistrationService pendingRegistrationService)
     {
         this._bcryptService = bcryptService;
         this._dbContext = dbContext;
