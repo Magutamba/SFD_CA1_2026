@@ -80,3 +80,6 @@ Desktop.ini
 *.db-shm
 *.db-wal
 *.db-journal
+
+# Ignore log files created by Serilog
+appLogs/
