@@ -40,10 +40,13 @@ public class AuthController : ControllerBase
     private readonly BcryptService _bcryptService;
     private readonly AppDbContext _dbContext;
     private readonly ILogger<AuthController> _logger; //Author Aaron Byrne-Logger for storing authentication events such as registering, log-in etc.
+    //for 2FA
+    private readonly TotpService _totpService;
+    private readonly PendingRegistrationService _pendingRegistrationService;
     
     private EmailAddressAttribute emailChecker = new EmailAddressAttribute();
 
-        public AuthController(BcryptService bcryptService, AppDbContext dbContext, ILogger<AuthController> logger)
+        public AuthController(BcryptService bcryptService, AppDbContext dbContext, ILogger<AuthController> logger, TotpService totpService, PendingRegistrationService pendingRegistrationService)
     {
         this._bcryptService = bcryptService;
         this._dbContext = dbContext;
@@ -130,14 +133,22 @@ public class AuthController : ControllerBase
         // Store the pending registration for 10 minutes.
         string registrationId =
             _pendingRegistrationService.CreatePendingRegistration(pendingRegistration);
-
+        
+        //Author Aaron Byrne-Logging a new user registration
+        _logger.LogInformation(
+            "{UserID} has had their {EventType}",
+            registrationId,
+            "Registration successful"
+        );
+        
         // Return the information needed to display the authenticator QR code.
         return Ok(new
         {
             registrationId,
             setupUri
         });
-
+        
+        /*
         //creating a user object
         var newUser = new User{
             Email = normalisedEmail,
@@ -157,14 +168,8 @@ public class AuthController : ControllerBase
         {
            return Conflict("Registration could not complete");
         }
-            
-        //Author Aaron Byrne-Logging a new user registration
-        _logger.LogInformation(
-            "{UserID} has had their {EventType}",
-            newUser.Id,
-            "Registration successful"
-            );
-        return Ok();
+        */
+
     }
 
     [HttpPost("confirm-registration")]
