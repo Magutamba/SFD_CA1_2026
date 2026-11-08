@@ -38,9 +38,11 @@ public class VoterApiClient
     {
         //***safe guard to ensure electionId is not null or empty use  the defaultElectionId if it is
         string currentElectionId = string.IsNullOrWhiteSpace(electionId)? defaultElectionId : electionId;
+        //generate an expiry time for the credential to be issued, same expiry in client and server
+        DateTimeOffset expiresAt = DateTimeOffset.UtcNow.AddHours(1);
 
         //genereate a random credential and blind it in client
-        BlindCredentialRequest blindRequest = await blindVoterClient.CreateBlindedCredentialAsync(currentElectionId);
+        BlindCredentialRequest blindRequest = await blindVoterClient.CreateBlindedCredentialAsync(currentElectionId,expiresAt);
 
         //send the blinded credential to the server and request a signed credential and ballot
         using var request = new HttpRequestMessage(HttpMethod.Post, $"api/elections/{currentElectionId}/credential");
@@ -52,9 +54,10 @@ public class VoterApiClient
         request.Content = JsonContent.Create(new CredentialRequest
             {
                 ElectionId = currentElectionId,//*** pass the safeguarded electionId
-                BlindedCredential = blindRequest.BlindedCredential
-            }
-        );
+                BlindedCredential = blindRequest.BlindedCredential,
+                CredentialExpiresAt = expiresAt
+                
+            });
 
         //send the request to the server and wait for the response signed credential and ballot
         using HttpResponseMessage response = await httpClient.SendAsync(request);
