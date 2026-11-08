@@ -58,7 +58,15 @@ public class VoterApiClient
 
         //send the request to the server and wait for the response signed credential and ballot
         using HttpResponseMessage response = await httpClient.SendAsync(request);
-
+        //handle unauthorized voter request
+        if(response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            throw new InvalidOperationException("You must be logged in to request credentials and a ballot.");
+        }
+        if(response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+        {
+            throw new InvalidOperationException("You are not eligible to request credentials or have already been issued a credential.")
+        }
         //ensure the response indicates success
         response.EnsureSuccessStatusCode();
 
