@@ -59,7 +59,7 @@ public class CredentialService
         //validate expiry
         if (request.CredentialExpiresAt <= DateTimeOffset.UtcNow)
         {
-            throw newInvalida
+            throw new InvalidOperationException("Voting credential has expired.");
         }
             //calculate the expiry before issuing the credential
             DateTimeOffset expiresAt = DateTimeOffset.UtcNow.AddHours(1);
