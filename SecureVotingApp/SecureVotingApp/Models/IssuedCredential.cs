@@ -15,5 +15,7 @@ public class IssuedCredential
 
     //records when the credential was issued
     public DateTimeOffset IssuedAt {get;set;}
+    //records when the credential was expires
+    public DateTimeOffset ExpiresAt {get;set;}
     
 }
