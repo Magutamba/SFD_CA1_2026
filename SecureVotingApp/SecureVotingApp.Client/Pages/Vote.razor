@@ -38,7 +38,7 @@
                     @(isLoading ? "Requesting credentials..." : "Request Credentials")
             </button>
         }
-        else if(!voteSession == null || !IsCredentialExpired ||receipt == null)
+        else if(voteSession != null && !IsCredentialExpired && receipt == null)
         {
             <hr />
             <h3> Voting Credential Issued</h3>
