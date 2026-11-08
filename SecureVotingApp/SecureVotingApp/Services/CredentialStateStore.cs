@@ -45,6 +45,17 @@ public class CredentialStateStore
             return false;
         }
 
+        //check if the voter already as an issued credential
+        var existingCredential = await dbContext.IssuedCredentials.FirstOrDefaultAsync(
+            ic => ic.UserId == userId && ic.ElectionId == electionId
+        );
+        //remove the existing credential if found to allow reissuance
+        if(existingCredential != null)
+        {
+            dbContext.IssuedCredentials.Remove(existingCredential);
+            await dbContext.SaveChangesAsync();
+        }
+
         //check the database for existin issued credential for the user and election
         var issuedCredential = new IssuedCredential
         {
@@ -70,7 +81,7 @@ public class CredentialStateStore
         }
     }
     //release an issued credential if signing fails before successful issuance
-    public async Task ReleaseIssuedCredentialAsync(int userId,string electionId)
+    public async Task ReleaseIssuedCredentialAsync(int userId,string electionId, DateTimeOffset expiresAt)
     {
         var issuedCredential = await dbContext.IssuedCredentials.FirstOrDefaultAsync(
                 ic => ic.UserId == userId && ic.ElectionId == electionId
