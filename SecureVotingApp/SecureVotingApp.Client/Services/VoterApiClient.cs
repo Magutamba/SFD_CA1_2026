@@ -133,6 +133,7 @@ public class VoterApiClient
                 ElectionId = session.ElectionId,
                 AnonymousCredential = session.AnonymousCredential,
                 MessageRandomizer = session.MessageRandomizer,
+                CredentialExpiresAt = session.CredentialExpiresAt,
                 VoteChoice = voteChoice,
             }
 
