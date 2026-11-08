@@ -67,6 +67,11 @@ public class VoterApiClient
         {
             throw new InvalidOperationException("You are not eligible to request credentials or have already been issued a credential.");
         }
+        //handle conflict response from server if voter has already been issued a credential for the election
+        if(response.StatusCode == System.Net.HttpStatusCode.Conflict)
+        {
+            throw new InvalidOperationException("You have already been issued a credential for this election.");
+        }
         //ensure the response indicates success
         response.EnsureSuccessStatusCode();
 
