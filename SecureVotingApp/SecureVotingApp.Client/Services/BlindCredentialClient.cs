@@ -60,6 +60,7 @@ public class BlindCredentialClient : IBlindCredentialClient
         //decode the base64url encoded RSA modulus and exponent into raw byte array
         byte[] modulusBytes = Base64UrlDecode(pubKeyDTO.Modulus);
         byte[] exponentBytes = Base64UrlDecode(pubKeyDTO.Exponent);
+        
 
         BigInteger modulus = new BigInteger(1, modulusBytes);
         BigInteger exponent = new BigInteger(1, exponentBytes);
@@ -69,7 +70,7 @@ public class BlindCredentialClient : IBlindCredentialClient
             throw new CryptographicException("RSA modulus must be odd and at least 2048 bits.");
         }
         //validate public exponent
-        if(exponent.CompareTo(BigInteger.ValueOf(3)) <0 || exponent.TestBit(0))
+        if(exponent.CompareTo(BigInteger.ValueOf(3)) <0 || !exponent.TestBit(0))
         {
             throw new CryptographicException("Invalid RSA public exponent.");
         }
