@@ -81,10 +81,10 @@ public class CredentialStateStore
         }
     }
     //release an issued credential if signing fails before successful issuance
-    public async Task ReleaseIssuedCredentialAsync(int userId,string electionId)
+    public async Task ReleaseIssuedCredentialAsync(int userId,string electionId, DateTimeOffset expiresAt)
     {
         var issuedCredential = await dbContext.IssuedCredentials.FirstOrDefaultAsync(
-                ic => ic.UserId == userId && ic.ElectionId == electionId
+                ic => ic.UserId == userId && ic.ElectionId == electionId && ic.ExpiresAt == expiresAt
         );
         //nothing to release  if no credential exists
         if (issuedCredential != null)

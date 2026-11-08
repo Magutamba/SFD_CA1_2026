@@ -76,7 +76,7 @@ public class CredentialService
         catch
         {
             //release the reserved credential only if signing fails
-            await stateStore.ReleaseIssuedCredentialAsync(userId, electionId);
+            await stateStore.ReleaseIssuedCredentialAsync(userId, electionId, expiresAt);
             throw;
         }
         //keep the issued credential for the after successful signing
