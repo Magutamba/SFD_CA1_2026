@@ -46,7 +46,7 @@ public class CredentialService
         {
             throw new InvalidOperationException("Invalid Credential request.");
         }
-        //ensure electionId match
+        //ensure electionId match       
         if (request.ElectionId != electionId)
         {
             throw new InvalidOperationException("The election id does not match");
@@ -56,11 +56,16 @@ public class CredentialService
         {
             throw new InvalidOperationException("Blinded credential is required");
         }
-        //calculate the expiry before issuing the credential
-        DateTimeOffset expiresAt = DateTimeOffset.UtcNow.AddHours(1);
+        //validate expiry
+        if (request.CredentialExpiresAt <= DateTimeOffset.UtcNow)
+        {
+            throw newInvalida
+        }
+            //calculate the expiry before issuing the credential
+            DateTimeOffset expiresAt = DateTimeOffset.UtcNow.AddHours(1);
 
         //reserve the credential for ths user before signing to prevent conflicts with concurrent requests
-        bool reserved = await stateStore.TryMarkIssuedAsync(userId, electionId, expiresAt );
+        bool reserved = await stateStore.TryMarkIssuedAsync(userId, electionId, expiresAt);
         if (!reserved)
         {
             throw new InvalidOperationException("Could not reserve credentials");

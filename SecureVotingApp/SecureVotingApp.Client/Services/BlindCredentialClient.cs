@@ -117,7 +117,7 @@ public class BlindCredentialClient : IBlindCredentialClient
 
         //declare a variable to hold the inverse blinding factor r, while ensuring it is coprime to the RSA modulus N
         BigInteger r;
-        do
+        do 
         {
             // generate a random blinding factor r in the range [1, N-1] where N is the RSA modulus
             byte[] rBytes = RandomNumberGenerator.GetBytes(k);
@@ -136,7 +136,8 @@ public class BlindCredentialClient : IBlindCredentialClient
         pssSigner.BlockUpdate(preparedMessage, 0, preparedMessage.Length);
         //generates the PSS encoded and RSA blinded credential
         byte[] blindedBytes = pssSigner.GenerateSignature();
-
+        //calculate expiry before blinding
+        DateTimeOffset expiresat = DateTimeOffset.UtcNow 
         //ensure the blinded credential as the same RSA modulus length
         if (!blindedBytes.Length.Equals(k))
         {
