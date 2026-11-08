@@ -67,7 +67,7 @@
             <!-- submite anonymous credential and vote -->
             <button class="btn btn-success"
                     @onclick="SubmitVote" 
-                    disabled="@isLoading || string.IsNullOrWhiteSpace(voteChoice)">
+                    disabled="@isLoading">
                     @(isLoading ? "Submitting vote..." : "Submit Vote")
             </button>
 
