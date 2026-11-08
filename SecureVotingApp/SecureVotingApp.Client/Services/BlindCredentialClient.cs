@@ -64,12 +64,12 @@ public class BlindCredentialClient : IBlindCredentialClient
         BigInteger modulus = new BigInteger(1, modulusBytes);
         BigInteger exponent = new BigInteger(1, exponentBytes);
         //validate RSA modulus length
-        if(modulus.BitLength <MinRsaBitLength || modulus.IsEven)
+        if(modulus.BitLength <MinRsaBitLength || !modulus.TestBit(0))
         {
             throw new CryptographicException("RSA modulus must be odd and at least 2048 bits.");
         }
         //validate public exponent
-        if(exponent.CompareTo(BigInteger.ValueOf(3)) <0 || exponent.IsEven || exponent.CompareTo(modulus)>=0)
+        if(exponent.CompareTo(BigInteger.ValueOf(3)) <0 || exponent.TestBit(0))
         {
             throw new CryptographicException("Invalid RSA public exponent.");
         }
