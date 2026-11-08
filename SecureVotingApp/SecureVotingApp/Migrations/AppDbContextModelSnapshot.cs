@@ -17,6 +17,25 @@ namespace SecureVotingApp.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.14");
 
+            modelBuilder.Entity("SecureVotingApp.Models.AnonBallot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ElectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VoteChoice")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AnonBallots");
+                });
+
             modelBuilder.Entity("SecureVotingApp.Models.IssuedCredential", b =>
                 {
                     b.Property<int>("Id")
@@ -81,6 +100,13 @@ namespace SecureVotingApp.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("LastUsedTotpTimeStep")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TotpSecret")
                         .IsRequired()
                         .HasColumnType("TEXT");
 

@@ -4,12 +4,31 @@ using SecureVotingApp.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
+using Serilog;
+using Serilog.Formatting.Compact;//Aaron Byrne-Allows for logs to be displays as JSON rather than plaintext
+using Serilog.Events;//Aaron Byrne-Allows for logging levels to be set, testing showed that over 1000 lines in the log were being created, which makes reading the information we need difficult
 
 //registering Dependency Injection
 var builder = WebApplication.CreateBuilder(args);
 
+//Author Aaron Byrne- Registering Serilog to be our logger and sending log messages to the terminal in IDE https://github.com/serilog/serilog-aspnetcore#serilogaspnetcore--- 
+builder.Services.AddSerilog((services, configuration) =>
+{
+    configuration
+        .MinimumLevel.Information()//Author Aaron Byrne-Ensures debug messages do not get saved to logs, but errors, info and warnings do
+        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)//Author Aaron Byrne-Only records errors and warnings from Micorsoft framework code
+        .MinimumLevel.Override("System", LogEventLevel.Warning)//Author Aaron Byrne-Ensures that logging from background .NET components is reduced
+        .WriteTo.Console()
+        .WriteTo.File(//Author Aaron Byrne-Saves logs to a file as JSON 
+        new RenderedCompactJsonFormatter(),//Author Aaron Byrne-Rendered allows for UserID and EventType to actually show up within the logs
+        "appLogs/logs.json",//Author Aaron Byrne-Saves logs within a JSON folder
+        rollingInterval: RollingInterval.Day);//Author Aaron Byrne-This will create a new log file each day
+});
+
 //back end (DI) registery (Jeán Walton)
 builder.Services.AddScoped<BcryptService>(); //hashing the argon2 
+builder.Services.AddScoped<TotpService>(); // (Lorenzo) was missing from my build - needed to be readded
+builder.Services.AddDataProtection(); // (Lorenzo) same as above
 //configure which Database (EFC) will use all configurations and passed to the super class of the AppDbContext class
 builder.Services.AddDbContext<AppDbContext>(options =>
 {   
@@ -47,6 +66,11 @@ builder.Services.AddSingleton<CredentialSigner>(_ => new CredentialSigner(privat
 builder.Services.AddScoped<CredentialStateStore>();
 //@author Moïse 
 builder.Services.AddScoped<CredentialService>();
+// Temporarily store pending registrations until TOTP setup is confirmed.(Jeán Walton)
+builder.Services.AddMemoryCache();
+
+// Manage temporary registrations until TOTP enrollment is verified.(Jeán Walton)
+builder.Services.AddSingleton<PendingRegistrationService>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -54,7 +78,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents() // Allows blazor client to render page and keep sensitive information away from server or transmission over network
     .AddAuthenticationStateSerialization(); // Shared authentication state with client
 
-// Add API Controllers - None currently exist but will be needed for future
+// Add API Controllers - (Jeán Walton)
 builder.Services.AddControllers();
 
 var app = builder.Build();
