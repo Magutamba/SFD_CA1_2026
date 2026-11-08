@@ -65,7 +65,7 @@ public class VoterApiClient
         }
         if(response.StatusCode == System.Net.HttpStatusCode.Forbidden)
         {
-            throw new InvalidOperationException("You are not eligible to request credentials or have already been issued a credential.")
+            throw new InvalidOperationException("You are not eligible to request credentials or have already been issued a credential.");
         }
         //ensure the response indicates success
         response.EnsureSuccessStatusCode();
