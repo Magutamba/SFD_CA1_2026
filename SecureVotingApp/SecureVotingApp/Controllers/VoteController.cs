@@ -148,7 +148,12 @@ public class VoteController : ControllerBase
                 CredentialHash = credentialHash,
                 SpentAt = DateTimeOffset.UtcNow
             });
-            //Anon ballot goes here
+            //Author Aaron Byrne- When a valid vote has been submitted, create a new anon ballot and save it to the database
+            dbContext.AnonBallots.Add(new AnonBallot
+            {
+                VoteChoice = request.VoteChoice,
+                ElectionId = request.ElectionId,
+            });
             await dbContext.SaveChangesAsync();
 
             //commit both records together
