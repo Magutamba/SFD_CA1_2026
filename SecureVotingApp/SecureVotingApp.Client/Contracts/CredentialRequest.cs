@@ -13,6 +13,6 @@ public class CredentialRequest
     [Required] public string BlindedCredential {get;set;} = string.Empty;
     //expiry time included in blind message
     [Required]
-     public DateTimeOffset CredentialExpiresAt {get;set}
+     public DateTimeOffset CredentialExpiresAt {get;set;} 
 
 }
