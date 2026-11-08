@@ -3,6 +3,7 @@
 namespace SecureVotingApp.Services;
 //directives to support asynchronous programming and tasks
 using System.Threading.Tasks;
+using System.Transactions;
 // directive to use Entity Framework Core for database operations LINQ, AnyAsync and SaveChangesAsync
 using Microsoft.EntityFrameworkCore;
 //directive to use AppDbContext for database queries and updates
@@ -49,11 +50,31 @@ public class CredentialStateStore
         var existingCredential = await dbContext.IssuedCredentials.FirstOrDefaultAsync(
             ic => ic.UserId == userId && ic.ElectionId == electionId
         );
-        //remove the existing credential if found to allow reissuance
-        if(existingCredential.ExpiresAt > DateTimeOffset.UtcNow)
+        if(existingCredential!=null && existingCredential.ExpiresAt <= DateTimeOffset.UtcNow)
         {
-            dbContext.IssuedCredentials.Remove(existingCredential);
+            //remove the existing credential if found to allow reissuance
+            //if the credential is expired the voter can request a new credential
+            if(existingCredential.ExpiresAt > DateTimeOffset.UtcNow)
+        
+            {
+                await Transaction.RollbackAsync();
+                return false;
+                
+            }
+            //existing credential is expired, update rather than remove
+            existingCredential.IssuedAt = DateTimeOffset.UtcNow;
+
+            //store new expiry time
+            existingCredential.ExpiresAt =expiresAt;
+
+            //save the updated credential record
             await dbContext.SaveChangesAsync();
+
+            await Transaction.CommitAsync();
+
+            return true;
+        
+
         }
 
         //check the database for existin issued credential for the user and election
