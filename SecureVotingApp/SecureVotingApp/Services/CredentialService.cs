@@ -57,7 +57,7 @@ public class CredentialService
             throw new InvalidOperationException("Blinded credential is required");
         }
         //calculate the expiry before issuing the credential
-        DateTimeOffset expiresAt = DateTimeOffSet.UtcNow.AddHours(1);
+        DateTimeOffset expiresAt = DateTimeOffset.UtcNow.AddHours(1);
 
         //reserve the credential for ths user before signing to prevent conflicts with concurrent requests
         bool reserved = await stateStore.TryMarkIssuedAsync(userId, electionId, expiresAt );
