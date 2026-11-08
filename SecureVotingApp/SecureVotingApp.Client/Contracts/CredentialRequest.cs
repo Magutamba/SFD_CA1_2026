@@ -5,14 +5,15 @@ using System.ComponentModel.DataAnnotations;
 namespace SecureVotingApp.Client.Contracts;
 //contract for requesting ballot and credentials from server in order to vote
 public class CredentialRequest
-{  [Required] 
+{
+    [Required]
     //identify the election the voter is voting in
-     public string ElectionId {get; set;} = string.Empty;
+    public string ElectionId { get; set; } = string.Empty;
 
     //created then blinded in client before sending to server prevents server from knowing voter id
-    [Required] public string BlindedCredential {get;set;} = string.Empty;
+    [Required] public string BlindedCredential { get; set; } = string.Empty;
     //expiry time included in blind message
     [Required]
-     public DateTimeOffset CredentialExpiresAt {get;set;} 
+    public DateTimeOffset CredentialExpiresAt { get; set; }
 
 }

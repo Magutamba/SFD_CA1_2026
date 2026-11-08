@@ -83,7 +83,7 @@ public class BlindCredentialClient : IBlindCredentialClient
     }
 
     //generates a blinded voting credential asynchronously for the specified election
-    public async Task<BlindCredentialRequest> CreateBlindedCredentialAsync(string electionId)
+    public async Task<BlindCredentialRequest> CreateBlindedCredentialAsync(string electionId, DateTimeOffset expiresAt)
     {
         if (string.IsNullOrWhiteSpace(electionId))
         {
@@ -98,8 +98,10 @@ public class BlindCredentialClient : IBlindCredentialClient
 
         //calculates the RSA modulus byte length k rounding bits to full octet 
         int k = (modulus.BitLength + 7) / 8;
+        //included electionId and expiry time in the blind message to prevent replay attacks and ensure credential validity
+        string message = $"{electionId}\n{expiresAt.ToUnixTimeSeconds()}";
         //EMSA-PSS padding structure using SHA384 per RFC 9474  
-        byte[] messageBytes = System.Text.Encoding.UTF8.GetBytes(electionId);
+        byte[] messageBytes = System.Text.Encoding.UTF8.GetBytes(message);
         //generates a random 32 byte prefix for the prepared message as required by RFC 9474 to prevent signature malleability
         byte[] messageRandomizer = RandomNumberGenerator.GetBytes(RandomizerLength);
         //append the prefix to the electionId message bytes to create the prepared message for signing
@@ -150,7 +152,8 @@ public class BlindCredentialClient : IBlindCredentialClient
             {
                 BlindingValue = Base64UrlEncode(r.ToByteArrayUnsigned()),
                 MessageRandomizer = Base64UrlEncode(messageRandomizer),
-                ElectionId = electionId
+                ElectionId = electionId,
+                CredentialExpiresAt = expiresAt
 
             }
 
