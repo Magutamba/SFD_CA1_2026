@@ -137,7 +137,7 @@ public class BlindCredentialClient : IBlindCredentialClient
         //generates the PSS encoded and RSA blinded credential
         byte[] blindedBytes = pssSigner.GenerateSignature();
         //calculate expiry before blinding
-        DateTimeOffset expiresat = DateTimeOffset.UtcNow 
+        DateTimeOffset expiresAt = DateTimeOffset.UtcNow;
         //ensure the blinded credential as the same RSA modulus length
         if (!blindedBytes.Length.Equals(k))
         {
