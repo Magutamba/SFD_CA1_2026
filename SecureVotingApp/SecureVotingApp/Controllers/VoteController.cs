@@ -152,7 +152,7 @@ public class VoteController : ControllerBase
             dbContext.AnonBallots.Add(new AnonBallot
             {
                 VoteChoice = request.VoteChoice,
-                ElectionId = request.ElectionId,
+                ElectionId = electionId,
             });
             await dbContext.SaveChangesAsync();
 
