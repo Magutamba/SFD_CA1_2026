@@ -50,7 +50,7 @@ public class CredentialStateStore
             ic => ic.UserId == userId && ic.ElectionId == electionId
         );
         //remove the existing credential if found to allow reissuance
-        if(existingCredential != null)
+        if(existingCredential.ExpiresAt > DateTimeOffset.UtcNow)
         {
             dbContext.IssuedCredentials.Remove(existingCredential);
             await dbContext.SaveChangesAsync();

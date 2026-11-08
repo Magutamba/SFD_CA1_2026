@@ -62,7 +62,7 @@ public class CredentialService
             throw new InvalidOperationException("Voting credential has expired.");
         }
             //calculate the expiry before issuing the credential
-            DateTimeOffset expiresAt = DateTimeOffset.UtcNow.AddHours(1);
+            DateTimeOffset expiresAt = request.CredentialExpiresAt;
 
         //reserve the credential for ths user before signing to prevent conflicts with concurrent requests
         bool reserved = await stateStore.TryMarkIssuedAsync(userId, electionId, expiresAt);
