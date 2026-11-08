@@ -97,7 +97,7 @@ public class VoteController : ControllerBase
         //reject expired credentials using server clock
         if(request.CredentialExpiresAt<= DateTimeOffset.UtcNow)
         {
-            return unauthorized("Voting credential has expired.");
+            return Unauthorized("Voting credential has expired.");
         }
         //***safe guard to ensure electionId is not null or empty use  the defaultElectionId if it is
         string electionId = string.IsNullOrWhiteSpace(request.ElectionId) ? defaultElectionId : request.ElectionId;
