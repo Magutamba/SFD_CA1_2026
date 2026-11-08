@@ -37,7 +37,7 @@ public class CredentialStateStore
 
     // record one credential issuance per voter, unique database index prevents duplicate issuance
     // async to not block the server thread waiting for the db to connect
-    public async Task<bool> TryMarkIssuedAsync(int userId,string electionId)
+    public async Task<bool> TryMarkIssuedAsync(int userId,string electionId, DateTimeOffset expiresAt)
     {
         //reject invalid userId or electionId
         if(userId<=0 || string.IsNullOrEmpty(electionId))
@@ -81,7 +81,7 @@ public class CredentialStateStore
         }
     }
     //release an issued credential if signing fails before successful issuance
-    public async Task ReleaseIssuedCredentialAsync(int userId,string electionId, DateTimeOffset expiresAt)
+    public async Task ReleaseIssuedCredentialAsync(int userId,string electionId)
     {
         var issuedCredential = await dbContext.IssuedCredentials.FirstOrDefaultAsync(
                 ic => ic.UserId == userId && ic.ElectionId == electionId
