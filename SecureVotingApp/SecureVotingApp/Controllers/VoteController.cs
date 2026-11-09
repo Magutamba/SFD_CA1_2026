@@ -92,7 +92,7 @@ public class VoteController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.AnonymousCredential) || string.IsNullOrWhiteSpace(request.VoteChoice)
                || string.IsNullOrWhiteSpace(request.MessageRandomizer))
         {
-            return BadRequest("Invalid request data, missin.");
+            return BadRequest("Invalid request data, missing.");
         }
         //reject expired credentials using server clock
         if(request.CredentialExpiresAt<= DateTimeOffset.UtcNow)

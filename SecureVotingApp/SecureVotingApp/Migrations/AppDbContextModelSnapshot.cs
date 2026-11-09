@@ -46,6 +46,9 @@ namespace SecureVotingApp.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTimeOffset>("IssuedAt")
                         .HasColumnType("TEXT");
 
