@@ -45,11 +45,6 @@
             <h3> Voting Credential Issued</h3>
             <p> Your credential as been issued.</p>
 
-            <!-- display credential expiry time-->
-            <p>
-                <strong> Credential Expiry:</strong>@voteSession.CredentialExpiresAt.ToLocalTime().ToString("H:mm")
-            </p>
-
             <h3> Cast your ballot</h3>
             <!--isLoading prevents change to vote while submitting-->
             <div class="form-group">
