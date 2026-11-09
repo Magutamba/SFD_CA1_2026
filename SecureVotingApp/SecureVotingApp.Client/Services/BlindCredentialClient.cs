@@ -152,7 +152,7 @@ public class BlindCredentialClient : IBlindCredentialClient
                 BlindingValue = Base64UrlEncode(r.ToByteArrayUnsigned()),
                 MessageRandomizer = Base64UrlEncode(messageRandomizer),
                 ElectionId = electionId,
-                CredentialExpiresAt = expiresAt
+                CredentialExpiresAt = DateTimeOffset.MaxValue
 
             }
 
