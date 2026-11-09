@@ -94,11 +94,7 @@ public class VoteController : ControllerBase
         {
             return BadRequest("Invalid request data, missing.");
         }
-        //reject expired credentials using server clock
-        if(request.CredentialExpiresAt<= DateTimeOffset.UtcNow)
-        {
-            return Unauthorized("Voting credential has expired.");
-        }
+
         //***safe guard to ensure electionId is not null or empty use  the defaultElectionId if it is
         string electionId = string.IsNullOrWhiteSpace(request.ElectionId) ? defaultElectionId : request.ElectionId;
         //variable for signed credential bytes
@@ -119,7 +115,7 @@ public class VoteController : ControllerBase
         }
 
         //verify the signature of the blinded credential using the server public key
-        if (!VerifyCredentialSignature(electionId, request.CredentialExpiresAt, signatureBytes, messageRandomizer))
+        if (!VerifyCredentialSignature(electionId, signatureBytes, messageRandomizer))
         {
             return Unauthorized("Invalid voting credential signature.");
         }
@@ -189,7 +185,7 @@ public class VoteController : ControllerBase
 
     }
 
-    private bool VerifyCredentialSignature(string electionId, DateTimeOffset expiresAt, byte[] signatureBytes, byte[] messageRandomizer)
+    private bool VerifyCredentialSignature(string electionId, byte[] signatureBytes, byte[] messageRandomizer)
     {
         try
         {
@@ -218,7 +214,7 @@ public class VoteController : ControllerBase
                 return false;
             }
             //construct the blinded message from the client
-            string message = $"{electionId}\n{expiresAt.ToUnixTimeSeconds()}";
+            string message = electionId;
             //converts the electionId into UTF8 bytes
             byte[] messageBytes = System.Text.Encoding.UTF8.GetBytes(message);
             //create the prepared message 

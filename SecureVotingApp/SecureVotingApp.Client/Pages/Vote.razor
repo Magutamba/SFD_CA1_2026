@@ -29,7 +29,7 @@
 
         <!--show the credential request button before session starts --->
 
-        @if(voteSession == null || IsCredentialExpired)
+        @if(voteSession == null && receipt ==null)
         {
             <!-- request credentials before allowing vote -->
             <p>Request Credentials to vote</p>
@@ -39,7 +39,7 @@
                     @(isLoading ? "Requesting credentials..." : "Request Credentials")
             </button>
         }
-        else if(voteSession != null && !IsCredentialExpired && receipt == null)
+        else if(voteSession != null && receipt == null)
         {
             <hr />
             <h3> Voting Credential Issued</h3>
@@ -83,6 +83,10 @@
             <p>
                 <strong>Receipt ID: </strong>@receipt.ReceiptId
             </p>
+            <p class="text-success">
+                Your vote has been successfully submitted and recorded. You cannot request another credential or vote again.
+
+            </p>
         }
 
         @if (!string.IsNullOrEmpty(errorMessage))
@@ -105,33 +109,45 @@
     //store user vote
     private string voteChoice = string.Empty;
 
+    //restore existing credential and receipt from browser session
+    //VoterApiClient will handle the session storage 
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isLoading = true;
+            //restore previously save vote session
+            voteSession = await VoterApiClient.GetSavedVoteSessionAsync();
+            receipt = await VoterApiClient.GetSavedVoteReceiptAsync();
+
+        }catch(Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
     //control loading state for async operations
     private bool isLoading =false;
 
     //store error message for display
     private string errorMessage = string.Empty;
 
-    //check whether anonymous credential as expired
-    private bool IsCredentialExpired => voteSession!=null && DateTimeOffset.UtcNow > voteSession.CredentialExpiresAt;
-
     //request and receive anonymous signed voting credentials 
     private async Task RequestCredentials()
     {
-        if (isLoading)
+        if (isLoading || voteSession != null || receipt !=null)
             return;
         try
         {
             isLoading = true;
             errorMessage = string.Empty;
-            if (IsCredentialExpired)
-            {
-                //reset the vote session and receipt to allow for new credential request
-                voteSession = null;
-                receipt = null;
-                voteChoice = string.Empty;
-            }
-            //call api client to request and unblind the credentials from the server
-            voteSession = await VoterApiClient.RequestBallotAsync();
+           
+                //VoterApiClient retrieves the blinded credential from the server, credential session storage
+                voteSession = await VoterApiClient.RequestBallotAsync();
         }
         catch (Exception ex)
         {
@@ -147,7 +163,7 @@
     private async Task SubmitVote()
     {
         //ensure  credential, vote is present exist before submission
-        if(isLoading ||voteSession == null || IsCredentialExpired || string.IsNullOrWhiteSpace(voteChoice))
+        if(isLoading || voteSession == null || receipt != null ||string.IsNullOrWhiteSpace(voteChoice))
             return;
         try
         {
@@ -156,10 +172,16 @@
 
             //call api client to submit the vote
             receipt = await VoterApiClient.SubmitVoteAsync(voteSession, voteChoice.Trim());
+
+            //clear credential from component memory
+            voteSession = null;
+
+            //clear the vote choice after submission
+            voteChoice = string.Empty;
         }
         catch (Exception ex)
         {
-            errorMessage =ex.Message;
+            errorMessage =ex.Message; 
 
         }finally
         {

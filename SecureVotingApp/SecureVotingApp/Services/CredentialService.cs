@@ -17,6 +17,8 @@ public class CredentialService
     private readonly CredentialSigner credentialSigner;
     //state store to persist credential issued per user session
     private readonly CredentialStateStore stateStore;
+    //provide the credential time span
+    private readonly TimeSpan credentialExpiryTime = TimeSpan.FromMinutes(15);
 
     //constructor to inject the state store dependency
     public CredentialService(CredentialSigner credentialSigner, CredentialStateStore stateStore)
@@ -25,10 +27,15 @@ public class CredentialService
         this.stateStore = stateStore;
     }
 
-    //validates the credential request and issues aa signed blinded credential if the user is eligible
+    //validates the credential request and issues a signed blinded credential if the user is eligible
     public async Task<CredentialResponse> IssueAsync(
         int userId, string electionId, CredentialRequest request)
     {
+        //validate request
+        if (request == null)
+        {
+            throw new InvalidOperationException("Invalid Credential request.");
+        }
 
         //if userId is invalid or electionI
         if (userId <= 0)
@@ -41,11 +48,6 @@ public class CredentialService
 
             throw new InvalidOperationException("Invalid electionId");
         }
-        //validate request
-        if (request == null)
-        {
-            throw new InvalidOperationException("Invalid Credential request.");
-        }
         //ensure electionId match       
         if (request.ElectionId != electionId)
         {
@@ -56,13 +58,8 @@ public class CredentialService
         {
             throw new InvalidOperationException("Blinded credential is required");
         }
-        //validate expiry
-        if (request.CredentialExpiresAt <= DateTimeOffset.UtcNow)
-        {
-            throw new InvalidOperationException("Voting credential has expired.");
-        }
-            //calculate the expiry before issuing the credential
-            DateTimeOffset expiresAt = request.CredentialExpiresAt;
+        //determine if the whether the credential can still be used
+        DateTimeOffset expiresAt = DateTimeOffset.MaxValue;
 
         //reserve the credential for ths user before signing to prevent conflicts with concurrent requests
         bool reserved = await stateStore.TryMarkIssuedAsync(userId, electionId, expiresAt);

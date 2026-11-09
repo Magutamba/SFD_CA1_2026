@@ -33,9 +33,9 @@ public class CredentialStateStore
         {
             return false;
         }
-
+        //check all issued credentials
         return await dbContext.IssuedCredentials.AnyAsync(ic =>
-            ic.UserId == userId && ic.ElectionId == electionId && ic.ExpiresAt > DateTimeOffset.UtcNow
+            ic.UserId == userId && ic.ElectionId == electionId && ic.ExpiresAt > DateTimeOffset.MaxValue
         );
     }
 
@@ -45,11 +45,6 @@ public class CredentialStateStore
     {
         //reject invalid userId or electionId
         if (userId <= 0 || string.IsNullOrEmpty(electionId))
-        {
-            return false;
-        }
-        //reject expired credentials
-        if (expiresAt <= DateTimeOffset.UtcNow)
         {
             return false;
         }
@@ -64,29 +59,12 @@ public class CredentialStateStore
             var existingCredential = await dbContext.IssuedCredentials.FirstOrDefaultAsync(
                 ic => ic.UserId == userId && ic.ElectionId == electionId
             );
-            issuedCredential = existingCredential;
+            // an existing credential prevents new issuance regardless of expiry
             if (existingCredential != null)
             {
-                //if the credential is expired the voter can request a new credential
-                if (existingCredential.ExpiresAt > DateTimeOffset.UtcNow)
-                {
+                    //if the credential is expired the voter cannot reuse it
                     await transaction.RollbackAsync();
                     return false;
-
-                }
-                //existing credential is expired, update rather than remove
-                existingCredential.IssuedAt = DateTimeOffset.UtcNow;
-
-                //store new expiry time
-                existingCredential.ExpiresAt = expiresAt;
-                // assign the existing credential to the issuedCredential so catch block can detach if it save fails
-                issuedCredential = existingCredential;
-
-                //save the updated credential record
-                await dbContext.SaveChangesAsync();
-                //commit the transaction after successful credential insertion
-                await transaction.CommitAsync();
-                return true;
             }
 
 
@@ -96,7 +74,8 @@ public class CredentialStateStore
                 UserId = userId,
                 ElectionId = electionId,
                 IssuedAt = DateTimeOffset.UtcNow,
-                ExpiresAt = expiresAt
+                //represent active until spent
+                ExpiresAt =  DateTimeOffset.MaxValue
             };
 
             dbContext.IssuedCredentials.Add(issuedCredential);
