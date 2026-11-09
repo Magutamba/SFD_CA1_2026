@@ -96,7 +96,6 @@
 </div>
 
 @code{
-    <!--*** removed the paramter for electionId-->
 
     //anonymous anonymous credential in memory
     private VoteSession? voteSession;
@@ -132,7 +131,6 @@
                 voteChoice = string.Empty;
             }
             //call api client to request and unblind the credentials from the server
-            //*** remove the electionId parameter
             voteSession = await VoterApiClient.RequestBallotAsync();
         }
         catch (Exception ex)
