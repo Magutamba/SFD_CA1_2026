@@ -39,7 +39,7 @@ public class VoterApiClient
         //***safe guard to ensure electionId is not null or empty use  the defaultElectionId if it is
         string currentElectionId = string.IsNullOrWhiteSpace(electionId)? defaultElectionId : electionId;
         //generate an expiry time for the credential to be issued, same expiry in client and server
-        DateTimeOffset expiresAt = DateTimeOffset.UtcNow.AddHours(1);
+        DateTimeOffset expiresAt = DateTimeOffset.UtcNow.AddMinutes(15);
 
         //genereate a random credential and blind it in client
         BlindCredentialRequest blindRequest = await blindVoterClient.CreateBlindedCredentialAsync(currentElectionId,expiresAt);

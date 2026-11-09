@@ -248,7 +248,7 @@ public class BlindCredentialClient : IBlindCredentialClient
         //intialize signature verification with the public key
         verifier.Init(false,pubKey);
 
-        //supply the original prepard message
+        //supply the original prepared message
         verifier.BlockUpdate(preparedMessage,0, preparedMessage.Length);
         //verifies the unblinded credential before returning it to the client
         if (!verifier.VerifySignature(fixedLenUnBlinded))
