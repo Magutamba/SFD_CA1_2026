@@ -6,7 +6,8 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Components.WebAssembly.Http;
 // * ADDED: imports the client-side request and response contracts.
 using SecureVotingApp.Client.Contracts;
-using Blazored.SessionStorage;
+//provides access to identity claims to retrieve the logged in userId
+using System.Security.Claims;
 //logical namespace for grouping services components together
 namespace SecureVotingApp.Client.Services;
 
@@ -19,24 +20,19 @@ public class VoterApiClient
     private readonly IBlindCredentialClient blindVoterClient;
     //***symplify application, but allows for future extension
     private const string defaultElectionId = "election-2026";
-    //browser session storage 
-    private readonly ISessionStorageService sessionStorage;
-    //browser session storage key for storing the  signed credential in browser session storage to prevent multiple credential requests for the same election
-    private const string CredentialSessionKey = "credential-session";
-    //store the orginal blinded request until vote succeeds
-    private const string BlindRequestKey = "blind-request";
-    //store the unblinded voting session
-    private const string VoteSessionKey = "vote-session";
-    //store the successful vote receipt
-    private const string VoteReceiptKey = "vote-receipt";
+
+    //store the id of the account associated with the current voting session
+    private const string UserIdSessionKey = "voting-user-session";
     //constructor for VoterApiClient class, accepts dependencies via ASP.NET Core dpendency injection
-    public VoterApiClient(HttpClient httpClient, IBlindCredentialClient blindVoterClient, ISessionStorageService sessionStorage)
+    public VoterApiClient(HttpClient httpClient, IBlindCredentialClient blindVoterClient,
+           ISessionStorageService sessionStorage, AuthenticationStateProvider authenticationStateProvider)
     {
         //assign the injected HTTP client instance to the private field for use in API calls
         this.httpClient = httpClient;
         //assign injected blind credential service to the class field for use in blinding credentials before sending to server
         this.blindVoterClient = blindVoterClient;
         this.sessionStorage = sessionStorage;
+        this.authenticationStateProvider = authenticationStateProvider;
     }
     //***overload the method and allowing callers to omit the electionId and use the default electionId
     public Task<VoteSession> RequestBallotAsync()
@@ -47,7 +43,9 @@ public class VoterApiClient
     //method for requesting credentials and ballot from the server for voter to cast their vote
     public async Task<VoteSession> RequestBallotAsync(string electionId)
     {
-        //***safe guard to ensure electionId is not null or empty use  the defaultElectionId if it is
+        //check for account change and clear any existing voting data if the account has changed
+        await CheckUserSessionAsync();
+        //safe guard to ensure electionId is not null or empty use  the defaultElectionId if it is
         string currentElectionId = string.IsNullOrWhiteSpace(electionId) ? defaultElectionId : electionId;
         //check whether an unblinded credential already exists
         VoteSession? savedSession = await sessionStorage.GetItemAsync<VoteSession>(VoteSessionKey);
@@ -120,8 +118,7 @@ public class VoterApiClient
             ElectionId = credentialResponse.ElectionId,
             AnonymousCredential = anonymousCredential,
             MessageRandomizer = blindRequest.State.MessageRandomizer,
-            VoteChoice = string.Empty,
-            CredentialExpiresAt = credentialResponse.CredentialExpiresAt,
+            VoteChoice = string.Empty
         };
 
         //save the recorded anonymous credential, allow voter reuse it after page reload
@@ -138,7 +135,11 @@ public class VoterApiClient
         VoteSession session,
         string voteChoice)
     {
-
+        //check for account change and clear any existing voting data if the account has changed
+        if(await CheckUserSessionAsync())
+       {
+            throw new InvalidOperationException("Your account has changed. Please request a new credential.");
+       }
 
         //POST request target votes endpoint
         //using  var ensures memory and headers are automatically disposed once executed
@@ -158,7 +159,6 @@ public class VoterApiClient
                 ElectionId = session.ElectionId,
                 AnonymousCredential = session.AnonymousCredential,
                 MessageRandomizer = session.MessageRandomizer,
-                CredentialExpiresAt = session.CredentialExpiresAt,
                 VoteChoice = voteChoice,
             }
 
@@ -173,39 +173,11 @@ public class VoterApiClient
         VoteReceipt voteReceipt = await response.Content.ReadFromJsonAsync<VoteReceipt>()
             ?? throw new InvalidOperationException("The vote response was empty."
             );
-        //save the vote receipt before clearing the credential
-        await sessionStorage.SetItemAsync(VoteReceiptKey, voteReceipt);
-        //removed the saved voting credential from session storage after success
-        await sessionStorage.RemoveItemAsync(VoteSessionKey);
-        //removed any remaining blinded request
-        await sessionStorage.RemoveItemAsync(BlindRequestKey);
-
 
         //return confirmation of accepted vote 
 
         return voteReceipt;
 
-    }
-
-    //method to restore the saved vote session after page reload
-    public async Task<VoteSession?> GetSavedVoteSessionAsync()
-    {
-        return await sessionStorage.GetItemAsync<VoteSession>(VoteSessionKey);
-    }
-    //restore the successful vote receipt after reload
-    public async Task<VoteReceipt?> GetSavedVoteReceiptAsync()
-    {
-        return await sessionStorage.GetItemAsync<VoteReceipt>(VoteReceiptKey);
-    }
-    //clear voting data when a user logs out 
-    public async Task ClearVotingDataAsync()
-    {
-        //save the vote receipt before clearing the credential
-        await sessionStorage.RemoveItemAsync(VoteReceiptKey);
-        //removed the saved voting credential from session storage after success
-        await sessionStorage.RemoveItemAsync(VoteSessionKey);
-        //removed any remaining blinded request
-        await sessionStorage.RemoveItemAsync(BlindRequestKey);
     }
 
 }

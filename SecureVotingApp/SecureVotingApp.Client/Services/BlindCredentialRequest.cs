@@ -20,6 +20,4 @@ public class BlindState
     public string BlindingValue {get;set;} = string.Empty;
     //electionId to track
     public string ElectionId {get;set;} = string.Empty;
-    //expiry time included in blind message
-     public DateTimeOffset CredentialExpiresAt {get;set;} 
 }

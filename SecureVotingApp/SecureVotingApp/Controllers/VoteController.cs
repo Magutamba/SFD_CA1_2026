@@ -147,7 +147,7 @@ public class VoteController : ControllerBase
             {
                 ElectionId = electionId,
                 CredentialHash = credentialHash,
-                SpentAt = DateTimeOffset.UtcNow
+
             });
             //Author Aaron Byrne- When a valid vote has been submitted, create a new anon ballot and save it to the database
             dbContext.AnonBallots.Add(new AnonBallot

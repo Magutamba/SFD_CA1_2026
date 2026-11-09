@@ -20,9 +20,6 @@ public class AnonymousVoteSubmit
     //RFC 9474 randomized prepared message prefix for credential verification
     [Required]
     public string MessageRandomizer { get; set; } = string.Empty;
-    //expiry time included in blind message
-    [Required]
-    public DateTimeOffset CredentialExpiresAt { get; set; }
 
     //the vote cast by the voter
     [Required]

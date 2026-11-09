@@ -35,7 +35,7 @@ public class CredentialStateStore
         }
         //check all issued credentials
         return await dbContext.IssuedCredentials.AnyAsync(ic =>
-            ic.UserId == userId && ic.ElectionId == electionId && ic.ExpiresAt > DateTimeOffset.MaxValue
+            ic.UserId == userId && ic.ElectionId == electionId
         );
     }
 
@@ -72,10 +72,7 @@ public class CredentialStateStore
             issuedCredential = new IssuedCredential
             {
                 UserId = userId,
-                ElectionId = electionId,
-                IssuedAt = DateTimeOffset.UtcNow,
-                //represent active until spent
-                ExpiresAt =  DateTimeOffset.MaxValue
+                ElectionId = electionId
             };
 
             dbContext.IssuedCredentials.Add(issuedCredential);
@@ -102,7 +99,7 @@ public class CredentialStateStore
 
     }
     //release an issued credential if signing fails before successful issuance
-    public async Task ReleaseIssuedCredentialAsync(int userId, string electionId, DateTimeOffset expiresAt)
+    public async Task ReleaseIssuedCredentialAsync(int userId, string electionId)
     {
         //reject invalid userId or electionId
         if (userId <= 0 || string.IsNullOrEmpty(electionId))

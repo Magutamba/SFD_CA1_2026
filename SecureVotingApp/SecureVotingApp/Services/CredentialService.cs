@@ -17,8 +17,6 @@ public class CredentialService
     private readonly CredentialSigner credentialSigner;
     //state store to persist credential issued per user session
     private readonly CredentialStateStore stateStore;
-    //provide the credential time span
-    private readonly TimeSpan credentialExpiryTime = TimeSpan.FromMinutes(15);
 
     //constructor to inject the state store dependency
     public CredentialService(CredentialSigner credentialSigner, CredentialStateStore stateStore)
@@ -62,7 +60,7 @@ public class CredentialService
         DateTimeOffset expiresAt = DateTimeOffset.MaxValue;
 
         //reserve the credential for ths user before signing to prevent conflicts with concurrent requests
-        bool reserved = await stateStore.TryMarkIssuedAsync(userId, electionId, expiresAt);
+        bool reserved = await stateStore.TryMarkIssuedAsync(userId, electionId);
         if (!reserved)
         {
             throw new InvalidOperationException("Could not reserve credentials");
@@ -78,7 +76,7 @@ public class CredentialService
         catch
         {
             //release the reserved credential only if signing fails
-            await stateStore.ReleaseIssuedCredentialAsync(userId, electionId, expiresAt);
+            await stateStore.ReleaseIssuedCredentialAsync(userId, electionId);
             throw;
         }
         //keep the issued credential for the after successful signing
@@ -86,8 +84,7 @@ public class CredentialService
         {
             ElectionId = electionId,
             SignedBlindedCredential = signedValue,
-            Choices = new List<string> { "Yes", "No" },
-            CredentialExpiresAt = expiresAt
+            Choices = new List<string> { "Yes", "No" }
         };
 
     }

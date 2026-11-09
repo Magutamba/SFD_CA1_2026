@@ -18,8 +18,4 @@ public class CredentialResponse
     //yes no vote choices can allow spoiled ballots
     public List<string> Choices {get;set;} = new() {"Yes" ," No"};
 
-    //the signed credential expires at this time
-
-    public DateTimeOffset CredentialExpiresAt  {get;set;}
-
 }   

@@ -12,10 +12,9 @@ public class IssuedCredential
 
     //identifies the election
     public string ElectionId {get;set;} = string.Empty;
-
-    //records when the credential was issued
-    public DateTimeOffset IssuedAt {get;set;}
-    //records when the credential was expires
-    public DateTimeOffset ExpiresAt {get;set;}
+    //orginal blind credntial created in client
+    public string BlindedCredential { get; set; } = string.Empty;
+    //server signed blindend credential 
+    public string SignedBlindedCredential {get;set;} =string.Empty;
     
 }
