@@ -128,7 +128,7 @@ public class CredentialStateStore
         //reject invalid userId or electionId
         if (userId <= 0 || string.IsNullOrEmpty(electionId))
         {
-            return false;
+            return;
         }
         //atomically remove the exact issued credential 
         await dbContext.IssuedCredentials.Where(ic => 
