@@ -62,7 +62,7 @@ public class VoterApiClient
         if (blindRequest == null)
         {
             //genereate a random credential and blind it in client
-            BlindCredentialRequest blindRequest = await blindVoterClient.CreateBlindedCredentialAsync(currentElectionId);
+            blindRequest = await blindVoterClient.CreateBlindedCredentialAsync(currentElectionId);
             //save before sending to server
             await sessionStorage.SetItemAsync(BlindRequestKey, blindRequest);
         }

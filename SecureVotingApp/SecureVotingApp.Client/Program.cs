@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using SecureVotingApp.Client;
 using SecureVotingApp.Client.Contracts;
 using SecureVotingApp.Client.Services;
+using Blazored.SessionStorage;
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
