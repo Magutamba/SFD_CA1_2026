@@ -197,5 +197,15 @@ public class VoterApiClient
     {
         return await sessionStorage.GetItemAsync<VoteReceipt>(VoteReceiptKey);
     }
+    //clear voting data when a user logs out 
+    public async Task ClearVotingDataAsync()
+    {
+        //save the vote receipt before clearing the credential
+        await sessionStorage.RemoveItemAsync(VoteReceiptKey);
+        //removed the saved voting credential from session storage after success
+        await sessionStorage.RemoveItemAsync(VoteSessionKey);
+        //removed any remaining blinded request
+        await sessionStorage.RemoveItemAsync(BlindRequestKey);
+    }
 
 }
