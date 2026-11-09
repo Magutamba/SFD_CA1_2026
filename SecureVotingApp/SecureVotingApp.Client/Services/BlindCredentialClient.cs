@@ -222,9 +222,10 @@ public class BlindCredentialClient : IBlindCredentialClient
         byte[] fixedLenUnBlinded = new byte[k];
         //left pad the unblinded value with zeros if it is shorter than the modulus length
         Buffer.BlockCopy(unBlindedBytes, 0, fixedLenUnBlinded, k - unBlindedBytes.Length, unBlindedBytes.Length);
-        
-        //retrive the original electionId as UTF8 bytes
-        byte[] messageBytes = System.Text.Encoding.UTF8.GetBytes(state.ElectionId);
+        //included electionId and expiry time in the blind message to prevent replay attacks and ensure credential validity
+        string message = $"{electionId}\n{expiresAt.ToUnixTimeSeconds()}";
+         //retrive the original electionId as UTF8 bytes 
+        byte[] messageBytes = System.Text.Encoding.UTF8.GetBytes(message);
 
         //ensure message prefix is 32 bytes exaclty
         byte[] randomizer = Base64UrlDecode(state.MessageRandomizer);
