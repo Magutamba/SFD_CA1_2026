@@ -1,9 +1,10 @@
 //@author Moïse
 //namespace for grouping services components together
 namespace SecureVotingApp.Services;
+// using system data to support database operations and data access
+using System.Data;
 //directives to support asynchronous programming and tasks
 using System.Threading.Tasks;
-using System.Transactions;
 // directive to use Entity Framework Core for database operations LINQ, AnyAsync and SaveChangesAsync
 using Microsoft.EntityFrameworkCore;
 //directive to use AppDbContext for database queries and updates
@@ -25,104 +26,113 @@ public class CredentialStateStore
 
 
     // check if voter as already been issued a credential for the election
-    public async Task<bool> HasBeenCredentialedAsync(int userId,string electionId)
+    public async Task<bool> HasBeenCredentialedAsync(int userId, string electionId)
     {
         //validate userId and electionId
-        if(userId<=0 || string.IsNullOrWhiteSpace(electionId))
+        if (userId <= 0 || string.IsNullOrWhiteSpace(electionId))
         {
             return false;
         }
 
-        return await dbContext.IssuedCredentials.AnyAsync(ic =>ic.UserId ==userId && ic.ElectionId==electionId);
+        return await dbContext.IssuedCredentials.AnyAsync(ic =>
+            ic.UserId == userId && ic.ElectionId == electionId && ic.ExpiresAt > DateTimeOffset.UtcNow
+        );
     }
 
     // record one credential issuance per voter, unique database index prevents duplicate issuance
     // async to not block the server thread waiting for the db to connect
-    public async Task<bool> TryMarkIssuedAsync(int userId,string electionId, DateTimeOffset expiresAt)
+    public async Task<bool> TryMarkIssuedAsync(int userId, string electionId, DateTimeOffset expiresAt)
     {
         //reject invalid userId or electionId
-        if(userId<=0 || string.IsNullOrEmpty(electionId))
+        if (userId <= 0 || string.IsNullOrEmpty(electionId))
+        {
+            return false;
+        }
+        //reject expired credentials
+        if (expiresAt <= DateTimeOffset.UtcNow)
         {
             return false;
         }
 
-        //check if the voter already as an issued credential
-        var existingCredential = await dbContext.IssuedCredentials.FirstOrDefaultAsync(
-            ic => ic.UserId == userId && ic.ElectionId == electionId
-        );
-        if(existingCredential!=null && existingCredential.ExpiresAt <= DateTimeOffset.UtcNow)
-        {
-            //remove the existing credential if found to allow reissuance
-            //if the credential is expired the voter can request a new credential
-            if(existingCredential.ExpiresAt > DateTimeOffset.UtcNow)
-        
-            {
-                await Transaction.RollbackAsync();
-                return false;
-                
-            }
-            //existing credential is expired, update rather than remove
-            existingCredential.IssuedAt = DateTimeOffset.UtcNow;
-
-            //store new expiry time
-            existingCredential.ExpiresAt =expiresAt;
-
-            //save the updated credential record
-            await dbContext.SaveChangesAsync();
-
-            await Transaction.CommitAsync();
-
-            return true;
-        
-
-        }
-
-        //check the database for existin issued credential for the user and election
-        var issuedCredential = new IssuedCredential
-        {
-            UserId=userId,
-            ElectionId=electionId,
-            IssuedAt=DateTimeOffset.UtcNow
-        };
-
-        dbContext.IssuedCredentials.Add(issuedCredential);
-
+        //start a serializable transaction to prevent concurrent credential issues
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        //make entity available in the catch block
+        IssuedCredential? issuedCredential = null;
         try
         {
+            //check if the voter already as an issued credential
+            var existingCredential = await dbContext.IssuedCredentials.FirstOrDefaultAsync(
+                ic => ic.UserId == userId && ic.ElectionId == electionId
+            );
+            issuedCredential = existingCredential;
+            if (existingCredential != null)
+            {
+                //if the credential is expired the voter can request a new credential
+                if (existingCredential.ExpiresAt > DateTimeOffset.UtcNow)
+                {
+                    await transaction.RollbackAsync();
+                    return false;
+
+                }
+                //existing credential is expired, update rather than remove
+                existingCredential.IssuedAt = DateTimeOffset.UtcNow;
+
+                //store new expiry time
+                existingCredential.ExpiresAt = expiresAt;
+                // assign the existing credential to the issuedCredential so catch block can detach if it save fails
+                issuedCredential = existingCredential;
+
+                //save the updated credential record
+                await dbContext.SaveChangesAsync();
+                //commit the transaction after successful credential insertion
+                await transaction.CommitAsync();
+                return true;
+            }
+
+
+            //check the database for existing issued credential for the user and election
+            issuedCredential = new IssuedCredential
+            {
+                UserId = userId,
+                ElectionId = electionId,
+                IssuedAt = DateTimeOffset.UtcNow,
+                ExpiresAt = expiresAt
+            };
+
+            dbContext.IssuedCredentials.Add(issuedCredential);
             //the unique index on the database will prevent duplicate issuance of credentials for the same voter
             await dbContext.SaveChangesAsync();
+            //commit the transaction after successful credential insertion
+            await transaction.CommitAsync();
             return true;
+
         }
-        catch(DbUpdateException)
+        catch (DbUpdateException)
         {
-            //remove the added entity from the context to prevent tracking issues
-            dbContext.Entry(issuedCredential).State = EntityState.Detached;
+            //detach only if new credential was added
+            if (issuedCredential != null)
+            {
+                //remove the added entity from the context to prevent tracking issues
+                dbContext.Entry(issuedCredential).State = EntityState.Detached;
+            }
+            //rollback the transaction after conflict to prevent partial updates
+            await transaction.RollbackAsync();
             // a duplicate userId as requested credentials for the same election
             return false;
         }
+
     }
     //release an issued credential if signing fails before successful issuance
-    public async Task ReleaseIssuedCredentialAsync(int userId,string electionId, DateTimeOffset expiresAt)
+    public async Task ReleaseIssuedCredentialAsync(int userId, string electionId, DateTimeOffset expiresAt)
     {
-        var issuedCredential = await dbContext.IssuedCredentials.FirstOrDefaultAsync(
-                ic => ic.UserId == userId && ic.ElectionId == electionId && ic.ExpiresAt == expiresAt
-        );
-        //nothing to release  if no credential exists
-        if (issuedCredential != null)
+        //reject invalid userId or electionId
+        if (userId <= 0 || string.IsNullOrEmpty(electionId))
         {
-            //remove the issued credential from the database
-            dbContext.IssuedCredentials.Remove(issuedCredential);
-            try
-            {
-                //save changes to the database
-                await dbContext.SaveChangesAsync();
-            }
-            catch
-            {
-                //detach the entry if concurrent operations modified the database to prevent tracking issues
-                dbContext.Entry(issuedCredential).State = EntityState.Detached;
-                throw;
-            }
+            return false;
         }
+        //atomically remove the exact issued credential 
+        await dbContext.IssuedCredentials.Where(ic => 
+                ic.UserId == userId && ic.ElectionId == electionId &&
+                  ic.ExpiresAt == expiresAt).ExecuteDeleteAsync();
     }
 }
