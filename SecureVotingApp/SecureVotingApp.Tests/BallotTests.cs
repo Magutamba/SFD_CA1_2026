@@ -36,4 +36,32 @@ public class BallotTests
         //Assert = Verify that the vote gets rejected
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task SubmitInvalidCredentials()
+    {
+        //Arrange
+        using var factory = new AuthTestFactory();
+        factory.InitialiseDatabase();
+
+        using var client = factory.CreateClient(
+            new WebApplicationFactoryClientOptions
+            {
+                BaseAddress = new Uri("https://localhost")
+            });
+
+        var ballot = new
+        {
+            ElectionId = "election-2026",
+            VoteChoice = "applesauce",
+            AnonymousCredential = "AA", //Fake voting credentials
+            MessageRandomizer = "AAAHAHAHAHAHAHAHAHAAHHAHAHA"
+        };
+        
+        //Act
+        var response = await client.PostAsJsonAsync("/api/vote", ballot);
+        
+        //Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);//Ensures that a 401 unathorized code is returned, meaning that the credential is invalid
+    }
 }
