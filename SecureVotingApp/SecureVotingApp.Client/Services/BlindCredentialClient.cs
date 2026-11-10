@@ -284,7 +284,7 @@ public class BlindCredentialClient : IBlindCredentialClient
 
         // use AES-GCM to encrypt the blind state with the recovery key and nonce, producing ciphertext and authentication tag
         var cipher = new GcmBlockCipher(new AesEngine());
-
+        //intialize the cipher for encryption with the recovery key and nonce, specifying the authentication tag length of 128 bits
         cipher.Init(true, new AeadParameters(new KeyParameter(recoveryKey), 128, nonce));
         byte[] output = new byte[cipher.GetOutputSize(plainText.Length)];
         int len = cipher.ProcessBytes(plainText, 0, plainText.Length, output,0);
@@ -294,7 +294,7 @@ public class BlindCredentialClient : IBlindCredentialClient
 
         // copy the nonce, ciphertext, and tag into the package in order
         Buffer.BlockCopy(nonce,0, package, 0, nonce.Length);
-        //
+        // copy the cipher text and authentication tag into the package after the nonce
         Buffer.BlockCopy(output, 0, package, nonce.Length, output.Length);
 
         // return the recovery key and encrypted package as base64 url encoded strings to the client
@@ -321,11 +321,13 @@ public class BlindCredentialClient : IBlindCredentialClient
         // extraction
         byte[] nonce = package[..12];
         byte[] cipherTextWithTag = package[12..];
-
+        //use AES-GCM to decrypt the blind state with the recovery key and nonce producing plaintext
         var cipher = new GcmBlockCipher(new AesEngine());
+        //initialize the ciipher for decryption with the recovery key and nonce, specifying the authentication tag length of 128 bits
         cipher.Init(false, new AeadParameters(new KeyParameter(key), 128, nonce));
-
+        //a byte array holds the decrypt plaintext
         byte[] plainText = new byte[cipher.GetOutputSize(cipherTextWithTag.Length)];
+        //
         int len = cipher.ProcessBytes(cipherTextWithTag, 0, cipherTextWithTag.Length, plainText, 0);
         cipher.DoFinal(plainText, len);
 

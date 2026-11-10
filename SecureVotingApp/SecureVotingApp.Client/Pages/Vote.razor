@@ -68,14 +68,15 @@ prerender: false))
                 <div class="card-body">
                     <div class="mb-3">
                         <label for="recoveryKeyInput" class="form-label font-monospace">Enter Recovery Key</label>
-                        <textarea id="recoveryKeyInput" class="form-control font-monospace" rows="2" 
-                                  placeholder="Paste your 256-bit Base64Url recovery key here..." 
-                                  @bind="inputRecoveryKey"></textarea>
+                        <textarea id="recoveryKeyInput" class="form-control font-monospace" rows="2"
+                                  placeholder="Paste your 256-bit Base64Url recovery key here..." @bind="inputRecoveryKey"></textarea>
                         <div class="form-text">
-                            Your recovery key decrypts your blinded credential locally in your browser. The key is never sent to the server.
+                            Your recovery key decrypts your blinded credential locally in your browser. The key is never sent to
+                            the server.
                         </div>
                     </div>
-                    <button class="btn btn-success" @onclick="RecoverBallot" disabled="@(isLoading || string.IsNullOrWhiteSpace(inputRecoveryKey))">
+                    <button class="btn btn-success" @onclick="RecoverBallot"
+                            disabled="@(isLoading || string.IsNullOrWhiteSpace(inputRecoveryKey))">
                         @if (isLoading)
                         {
                             <span class="spinner-border spinner-border-sm me-1" role="status"></span>
@@ -101,7 +102,8 @@ prerender: false))
                 </div>
                 <div class="card-body">
                     <p class="card-text small text-muted">
-                        If your browser refreshes or session expires before submitting, use this key to recover your voting credential:
+                        If your browser refreshes or session expires before submitting, use this key to recover your voting
+                        credential:
                     </p>
                     <div class="input-group mb-2">
                         <input type="text" class="form-control font-monospace small" value="@session.RecoveryKey" readonly />
@@ -121,12 +123,12 @@ prerender: false))
             <div class="card-body">
                 <div class="mb-3">
                     <label for="voteChoiceInput" class="form-label fw-bold">Enter Your Choice:</label>
-                    <input type="text" id="voteChoiceInput" class="form-control" 
-                           placeholder="Type your vote here..." 
+                    <input type="text" id="voteChoiceInput" class="form-control" placeholder="Type your vote here..."
                            @bind="selectedChoice" @bind:event="oninput" />
                 </div>
 
-                <button class="btn btn-success w-100" @onclick="SubmitVote" disabled="@(isLoading || string.IsNullOrWhiteSpace(selectedChoice))">
+                <button class="btn btn-success w-100" @onclick="SubmitVote"
+                        disabled="@(isLoading || string.IsNullOrWhiteSpace(selectedChoice))">
                     @if (isLoading)
                     {
                         <span class="spinner-border spinner-border-sm me-1" role="status"></span>
@@ -160,16 +162,18 @@ prerender: false))
 </div>
 
 @code {
-    private VoteSession? session;
-    private VoteReceipt? receipt;
-    
+    //state variables for the voting session and receipt
+    private VoteSession? session = null;
+    private VoteReceipt? receipt = null;
+
+
     private string selectedChoice = string.Empty;
     private string inputRecoveryKey = string.Empty;
     private string errorMessage = string.Empty;
-    
+    //controls
     private bool isLoading = false;
     private bool isRecoverMode = false;
-    private bool keyCopied = false;
+
 
     private async Task RequestBallot()
     {
@@ -178,6 +182,7 @@ prerender: false))
 
         try
         {
+            // request a new ballot ssession from the Voter API
             session = await VoterApiClient.RequestBallotAsync();
         }
         catch (Exception ex)
@@ -189,7 +194,10 @@ prerender: false))
             isLoading = false;
         }
     }
-
+    private async Task SubmitVote()
+    {
+        
+    }
     private async Task RecoverBallot()
     {
         if (string.IsNullOrWhiteSpace(inputRecoveryKey))
@@ -249,6 +257,7 @@ prerender: false))
             keyCopied = true;
         }
     }
+
 
     private void ResetForm()
     {
