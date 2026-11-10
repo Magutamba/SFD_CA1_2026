@@ -19,6 +19,7 @@ using Org.BouncyCastle.Math;
 //engine for RSA encryption and decryption
 using Org.BouncyCastle.Crypto.Engines;
 using SecureVotingApp.Client.Contracts;
+// json serializationa and deserialization
 using System.Text.Json;
 using Org.BouncyCastle.Crypto.Modes;
 //logical namespace for grouping services components together

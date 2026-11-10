@@ -19,7 +19,17 @@ prerender: false))
 <PageTitle>Vote</PageTitle>
 
 <div class="container my-4" style="max-width: 650px;">
-    <h2 class="mb-3">Secure Anonymous Voting</h2>
+<div class= "text-center mb-4">
+
+    <h2>Vote Anonymously</h2>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger" >
+            <strong>Error:</strong>@errorMessage
+            <button type="button" class="btn-close" @onclick="()"
+            </div>
+        }
 
     @if (!string.IsNullOrEmpty(errorMessage))
     {
@@ -28,22 +38,20 @@ prerender: false))
             <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
         </div>
     }
-
-    @if (session == null)
-    {
-        <!-- Initial Options: Request fresh ballot or Recover existing session -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-body">
-                <h5 class="card-title">Ballot Issuance & Recovery</h5>
-                <p class="card-text text-muted">
+    @*Session is empty*@
+        @if(session == null)
+        {
+            @*Request fresh ballot or recover existing session*@
+            <div class="card">
+                <h3 class="card-title"> Ballot Issuance & Recovery</h3>
+                <p class="card-text">
                     Request a new voting credential or recover an existing credential using your recovery key.
                 </p>
-
-                <div class="d-grid gap-2 d-md-flex justify-content-md-start">
-                    <button class="btn btn-primary me-md-2" @onclick="RequestBallot" disabled="@isLoading">
-                        @if (isLoading && !isRecoverMode)
+                <div >
+                    <button class="btn btn-primary" @onclick="RequestBallot" disabled="@isLoading">
+                        @if(isLoading && !isRecoverMode)
                         {
-                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            <span class="spinner-border spinner-border-sm"></span>
                             <span>Issuing Ballot...</span>
                         }
                         else
@@ -51,12 +59,21 @@ prerender: false))
                             <span>Request New Ballot</span>
                         }
                     </button>
-                    <button class="btn btn-outline-secondary" @onclick="ToggleRecoveryMode" disabled="@isLoading">
-                        @(isRecoverMode ? "Cancel Recovery" : "Recover Existing Ballot")
-                    </button>
+                     <button class="btn btn-primary" @onclick="ToggleRecoveryMode" disabled="@isLoading">
+                        @isRecoverMode ? "Cancel Recovery" : "Recover Existing Ballot"
+                        </button>
                 </div>
             </div>
-        </div>
+        }
+        @if (isRecoverMode)
+        {
+            @*Recovery Input Form*@
+            <div class="card mb-4"
+                <div class="card-header">
+                    <h3 >Recover Issued Ballot Session</h3>
+                </div>
+            </div>
+        }
 
         @if (isRecoverMode)
         {
@@ -142,20 +159,19 @@ prerender: false))
             </div>
         </div>
     }
-    else
-    {
+    else{
         <!-- Vote Submitted Receipt -->
-        <div class="card border-success shadow-sm mb-4">
-            <div class="card-header bg-success text-white">
-                <h5 class="mb-0">Vote Submitted Successfully</h5>
+        <div class="card border-success mb-4">
+            <div class="card-header ">
+                <h3 >Vote Submitted Successfully</h3>
             </div>
             <div class="card-body">
-                <p>Your anonymous vote has been recorded</p>
-                @if (!string.IsNullOrEmpty(receipt.ReceiptId))
+                <p>Your anonymous vote as been cast</p>
+                    @if (!string.IsNullOrEmpty(receipt.ReceiptId))
                 {
-                    <p class="font-monospace small"><strong>Receipt ID:</strong> @receipt.ReceiptId</p>
+                    <p ><strong>Receipt ID:</strong>@receipt.ReceiptId</p>
                 }
-                <button class="btn btn-primary" @onclick="ResetForm">Return to Start</button>
+                <button class="btn btn-primary" @onclick="ResetForm">Return to start</button>
             </div>
         </div>
     }
