@@ -20,6 +20,7 @@ using Org.BouncyCastle.Math;
 using Org.BouncyCastle.Crypto.Engines;
 using SecureVotingApp.Client.Contracts;
 using System.Text.Json;
+using Org.BouncyCastle.Crypto.Modes;
 //logical namespace for grouping services components together
 namespace SecureVotingApp.Client.Services;
 
@@ -281,24 +282,20 @@ public class BlindCredentialClient : IBlindCredentialClient
         //generate a random 12 byte nonce for AES-GCM encryption
         byte [] nonce = RandomNumberGenerator.GetBytes(12);
 
-        // ciphertext will be the same length as the plaintext
-        byte [] cipherText = new byte[plainText.Length];
-        // tag is 16 bytes for AES-GCM authentication
-        byte [] tag = new byte[16];
         // use AES-GCM to encrypt the blind state with the recovery key and nonce, producing ciphertext and authentication tag
-        using (var aesGcm = new AesGcm(recoveryKey))
-        {
-            aesGcm.Encrypt(nonce, plainText, cipherText, tag);
-        }
+        var cipher = new GcmBlockCipher(new AesEngine());
+
+        cipher.Init(true, new AeadParameters(new KeyParameter(recoveryKey), 128, nonce));
+        byte[] output = new byte[cipher.GetOutputSize(plainText.Length)];
+        int len = cipher.ProcessBytes(plainText, 0, plainText.Length, output,0);
+        cipher.DoFinal(output, len);
         // combine the nonce, ciphertext, and tag into a single package
-        byte[] package = new byte[nonce.Length + cipherText.Length + tag.Length];
+        byte[] package = new byte[nonce.Length + output.Length];
 
         // copy the nonce, ciphertext, and tag into the package in order
         Buffer.BlockCopy(nonce,0, package, 0, nonce.Length);
         //
-        Buffer.BlockCopy(cipherText, 0, package, nonce.Length, cipherText.Length);
-        //
-        Buffer.BlockCopy(tag, 0, package, nonce.Length + tag.Length, tag.Length);
+        Buffer.BlockCopy(output, 0, package, nonce.Length, output.Length);
 
         // return the recovery key and encrypted package as base64 url encoded strings to the client
         return new RecoveryMaterial
@@ -309,7 +306,7 @@ public class BlindCredentialClient : IBlindCredentialClient
 
     }
     // method to decrypt the encrypted package
-    public BlindState RestoreRecoveryPackage(string recoveryKey, string recoveryPackage)
+    public BlindState RestoreRecoveryPackage( string recoveryPackage, string recoveryKey)
     {
         // decode the base64 url encoded recovery key and package into raw byte arrays
         byte[] key = Base64UrlDecode(recoveryKey);
@@ -317,20 +314,20 @@ public class BlindCredentialClient : IBlindCredentialClient
         byte[] package = Base64UrlDecode(recoveryPackage);
 
         // validate the recovery key length
-        if(key.Length != 32)
+        if(key.Length != 32 || package.Length <12+16+1)
         {
             throw new InvalidOperationException("Invalid recovery information");
         }
         // extraction
         byte[] nonce = package[..12];
-        byte[] cipherText = package[12..28];
-        byte[] tag = package[28..];
+        byte[] cipherTextWithTag = package[12..];
 
-        byte[] plainText = new byte[cipherText.Length];
-        using (var aesGcm = new AesGcm(key))
-        {
-            aesGcm.Decrypt(nonce, cipherText, tag, plainText);
-        }
+        var cipher = new GcmBlockCipher(new AesEngine());
+        cipher.Init(false, new AeadParameters(new KeyParameter(key), 128, nonce));
+
+        byte[] plainText = new byte[cipher.GetOutputSize(cipherTextWithTag.Length)];
+        int len = cipher.ProcessBytes(cipherTextWithTag, 0, cipherTextWithTag.Length, plainText, 0);
+        cipher.DoFinal(plainText, len);
 
         return System.Text.Json.JsonSerializer.Deserialize<BlindState>(plainText)
             ?? throw new InvalidOperationException("Unable to restore blind state from recovery package.");

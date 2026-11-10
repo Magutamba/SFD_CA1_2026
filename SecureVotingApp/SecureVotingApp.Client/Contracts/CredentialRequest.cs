@@ -11,7 +11,7 @@ public class CredentialRequest
     public string ElectionId { get; set; } = string.Empty;
 
     //created then blinded in client before sending to server prevents server from knowing voter id
-    [Required] public string BlindedCredential { get; set; } = string.Empty;
+    public string BlindedCredential { get; set; } = string.Empty;
     //recovery package, encrypte blind state
     public string RecoveryPackage { get; set; } = string.Empty;
 

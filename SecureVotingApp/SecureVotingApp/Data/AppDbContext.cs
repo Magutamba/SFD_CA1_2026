@@ -60,8 +60,7 @@ public class AppDbContext : DbContext
             .IsRequired();//Ensures that each vote belongs to an election
         //@author Moïse recovery package is unique to prevent concurrency issues
         modelBuilder.Entity<IssuedCredential>()
-            .HasIndex(ic => ic.RecoveryPackage)
-            .IsUnique();// addemove unique before migration
+            .HasIndex(ic => ic.RecoveryPackage);// addemove unique before migration
     }
 
 }

@@ -11,7 +11,7 @@ prerender: false))
 <!--get the Contracts and Services*-->
 @using SecureVotingApp.Client.Contracts
 @using SecureVotingApp.Client.Services
-
+@using Microsoft.AspNetCore.Authorization;
 @*inject the VoterAPIClient to handle voter API endpoints for requesting credentials and ballots*@
 @inject VoterApiClient VoterApiClient
 
