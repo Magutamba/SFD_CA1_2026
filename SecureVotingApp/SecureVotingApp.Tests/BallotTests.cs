@@ -53,7 +53,7 @@ public class BallotTests
         var ballot = new
         {
             ElectionId = "election-2026",
-            VoteChoice = "applesauce",
+            VoteChoice = "No",
             AnonymousCredential = "AA", //Fake voting credentials
             MessageRandomizer = "AAAHAHAHAHAHAHAHAHAAHHAHAHA"
         };
@@ -62,6 +62,6 @@ public class BallotTests
         var response = await client.PostAsJsonAsync("/api/vote", ballot);
         
         //Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);//Ensures that a 401 unathorized code is returned, meaning that the credential is invalid
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);//Ensures that a 401 unathorized code is returned, meaning that the credential is invalid
     }
 }
