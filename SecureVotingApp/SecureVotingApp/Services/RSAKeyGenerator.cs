@@ -3,11 +3,11 @@
 using System.IO;
 //interface and classes for cryptographic algorithms in BouncyCastle RSA
 using Org.BouncyCastle.Crypto;
-// 
+// classes for generating RSA key pairs
 using Org.BouncyCastle.Crypto.Generators;
 //utility class for converting between byte arrays and BigInteger PEM file parsing
 using Org.BouncyCastle.OpenSsl;
-//
+// generating secure random number for cryptogrpahic operations
 using Org.BouncyCastle.Security;
 
 //namespace for grouping services components together
