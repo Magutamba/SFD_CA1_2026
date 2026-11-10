@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 //directives to use the contracts
 using SecureVotingApp.Client.Contracts;
+// directive to use the data models for the application
+using SecureVotingApp.Models;
 //rouping services components together
 namespace SecureVotingApp.Services;
 
@@ -35,7 +37,7 @@ public class CredentialService
             throw new InvalidOperationException("Invalid Credential request.");
         }
 
-        //if userId is invalid or electionI
+        //if userId is invalid or electionId
         if (userId <= 0)
         {
             throw new InvalidOperationException("Invalid userId");
@@ -51,41 +53,125 @@ public class CredentialService
         {
             throw new InvalidOperationException("The election id does not match");
         }
-
+        //recover requests do not sign new credentials
         if (string.IsNullOrWhiteSpace(request.BlindedCredential))
         {
-            throw new InvalidOperationException("Blinded credential is required");
+            var recovered = await RecoverAsync(userId, electionId);
+            if (recovered == null)
+            {
+                throw new InvalidOperationException("No issued credential found for recovery");
+            }
+            return recovered;
         }
-        //determine if the whether the credential can still be used
-        DateTimeOffset expiresAt = DateTimeOffset.MaxValue;
+        //validate fields for new issuancee
+        if (string.IsNullOrWhiteSpace(request.RecoveryPackage))
+        {
+            throw new InvalidOperationException("Recovery package is missing");
+        }
+        //check if the user already has a credential issuance
+        var existing = await stateStore.GetExistingIssuedCredentialAsync(userId, electionId);
+        //return the existing credential if it has already been issued
+        if (existing != null)
+        {
+            if (existing.BlindedCredential != request.BlindedCredential
+                 || existing.RecoveryPackage != request.RecoveryPackage )
+            {
+                throw new InvalidOperationException("A credential has already been issued, recover the original credential.");
+            }
+            //return orignial blinded credential
+            if (existing.Status == CredentialStatus.Issued)
+                return CreateResponse(existing);
+
+            return await CompleteIssuanceAsync(existing);
+        }
 
         //reserve the credential for ths user before signing to prevent conflicts with concurrent requests
-        bool reserved = await stateStore.TryMarkIssuedAsync(userId, electionId);
+        bool reserved = await stateStore.ReserveCredentialIssuedAsync(userId, electionId,
+                request.BlindedCredential, request.RecoveryPackage);
         if (!reserved)
         {
-            throw new InvalidOperationException("Could not reserve credentials");
+            existing = await stateStore.GetExistingIssuedCredentialAsync(userId, electionId);
+            if (existing == null || existing.BlindedCredential != request.BlindedCredential ||
+               existing.RecoveryPackage != request.RecoveryPackage)
+            {
+                throw new InvalidOperationException("A credential has already been issued");
 
+            }
+
+
+            if (existing.Status == CredentialStatus.Issued)
+                return CreateResponse(existing);
+
+            //complete the issuance for the thread that reserved the credential and return the signed credential
+            return await CompleteIssuanceAsync(existing);
         }
-        string signedValue;
+
+
+        var pending = await stateStore.GetExistingIssuedCredentialAsync(userId, electionId);
+        if (pending == null)
+        {
+            throw new InvalidOperationException("Credential reservation could not be retrieved");
+        }
+        return await CompleteIssuanceAsync(pending);
+
+    }
+    //sign and persit the original blinded credential 
+
+    private async Task<CredentialResponse> CompleteIssuanceAsync(IssuedCredential record)
+    {
         try
         {
             //sign the blinded credential using the server private signing key
-            signedValue = credentialSigner.SignBlindedCredential(request.BlindedCredential);
+            string signedValue = credentialSigner.SignBlindedCredential(record.BlindedCredential);
 
+            //saved signed response and mark issuance as completed
+            bool completed = await stateStore.CompleteIssuedCredentialAsync(record.UserId, record.ElectionId, signedValue);
+            if (!completed)
+            {
+                throw new InvalidOperationException("Credential issuancecould not be completed");
+            }
+
+            //update the record status locally to reflect the completed issuance
+            record.SignedBlindedCredential = signedValue;
+            record.Status = CredentialStatus.Issued;
+
+            return CreateResponse(record);
         }
         catch
         {
             //release the reserved credential only if signing fails
-            await stateStore.ReleaseIssuedCredentialAsync(userId, electionId);
+            await stateStore.ReleaseIssuedCredentialAsync(record.UserId, record.ElectionId);
             throw;
         }
-        //keep the issued credential for the after successful signing
+    }
+
+    //recover original credential. issuance
+    public async Task<CredentialResponse?> RecoverAsync(
+        int userId, string electionId)
+    {
+        if (userId <= 0 || string.IsNullOrWhiteSpace(electionId))
+        {
+            return null;
+        }
+
+        //retrieve the original issued credential for the user and election
+        var existing = await stateStore.GetRecoveryCredentialAsync(userId, electionId);
+        if (existing == null)
+        {
+            return null;
+        }
+
+        return CreateResponse(existing);
+    }
+    //method for creating response
+    private static CredentialResponse CreateResponse(IssuedCredential credential)
+    {
         return new CredentialResponse
         {
-            ElectionId = electionId,
-            SignedBlindedCredential = signedValue,
+            ElectionId = credential.ElectionId,
+            SignedBlindedCredential = credential.SignedBlindedCredential,
+            RecoveryPackage = credential.RecoveryPackage,
             Choices = new List<string> { "Yes", "No" }
         };
-
     }
 }

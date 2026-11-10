@@ -21,18 +21,13 @@ public class VoterApiClient
     //***symplify application, but allows for future extension
     private const string defaultElectionId = "election-2026";
 
-    //store the id of the account associated with the current voting session
-    private const string UserIdSessionKey = "voting-user-session";
     //constructor for VoterApiClient class, accepts dependencies via ASP.NET Core dpendency injection
-    public VoterApiClient(HttpClient httpClient, IBlindCredentialClient blindVoterClient,
-           ISessionStorageService sessionStorage, AuthenticationStateProvider authenticationStateProvider)
+    public VoterApiClient(HttpClient httpClient, IBlindCredentialClient blindVoterClient)
     {
         //assign the injected HTTP client instance to the private field for use in API calls
         this.httpClient = httpClient;
         //assign injected blind credential service to the class field for use in blinding credentials before sending to server
         this.blindVoterClient = blindVoterClient;
-        this.sessionStorage = sessionStorage;
-        this.authenticationStateProvider = authenticationStateProvider;
     }
     //***overload the method and allowing callers to omit the electionId and use the default electionId
     public Task<VoteSession> RequestBallotAsync()
@@ -43,27 +38,14 @@ public class VoterApiClient
     //method for requesting credentials and ballot from the server for voter to cast their vote
     public async Task<VoteSession> RequestBallotAsync(string electionId)
     {
-        //check for account change and clear any existing voting data if the account has changed
-        await CheckUserSessionAsync();
         //safe guard to ensure electionId is not null or empty use  the defaultElectionId if it is
         string currentElectionId = string.IsNullOrWhiteSpace(electionId) ? defaultElectionId : electionId;
-        //check whether an unblinded credential already exists
-        VoteSession? savedSession = await sessionStorage.GetItemAsync<VoteSession>(VoteSessionKey);
-        if (savedSession != null)
-        {
-            return savedSession;
-        }
+        //generate a blinded credential request locally
+        BlindCredentialRequest blindRequest = await blindVoterClient.CreateBlindedCredentialAsync(currentElectionId);
 
-        //retrieve the original blinded credential request if available
-        BlindCredentialRequest? blindRequest = await sessionStorage.GetItemAsync<BlindCredentialRequest>(BlindRequestKey);
-        //only generate a new blinded request if none exists
-        if (blindRequest == null)
-        {
-            //genereate a random credential and blind it in client
-            blindRequest = await blindVoterClient.CreateBlindedCredentialAsync(currentElectionId);
-            //save before sending to server
-            await sessionStorage.SetItemAsync(BlindRequestKey, blindRequest);
-        }
+        //generate recovery material and encrypted package locally
+        var client = (BlindCredentialClient)blindVoterClient;
+        RecoveryMaterial recoveryMaterial = client.CreateRecoveryMaterial(blindRequest.State);
 
 
         //send the blinded credential to the server and request a signed credential and ballot
@@ -76,7 +58,8 @@ public class VoterApiClient
         request.Content = JsonContent.Create(new CredentialRequest
         {
             ElectionId = currentElectionId,//*** pass the safeguarded electionId
-            BlindedCredential = blindRequest.BlindedCredential
+            BlindedCredential = blindRequest.BlindedCredential,
+            RecoveryPackage = recoveryMaterial.RecoveryPackage
 
         });
 
@@ -113,20 +96,14 @@ public class VoterApiClient
             blindRequest.State
         );
         //return a Vote Session object containin electionId, signed credential 
-        var session = new VoteSession
+        return new VoteSession
         {
             ElectionId = credentialResponse.ElectionId,
             AnonymousCredential = anonymousCredential,
             MessageRandomizer = blindRequest.State.MessageRandomizer,
-            VoteChoice = string.Empty
+            VoteChoice = string.Empty,
+            RecoveryKey = recoveryMaterial.RecoveryKey
         };
-
-        //save the recorded anonymous credential, allow voter reuse it after page reload
-        await sessionStorage.SetItemAsync(VoteSessionKey, session);
-        //remove temporary blinded request from session storage after successful unblinding and saving of the vote session
-        await sessionStorage.RemoveItemAsync(BlindRequestKey);
-
-        return session;
 
     }
 
@@ -135,11 +112,6 @@ public class VoterApiClient
         VoteSession session,
         string voteChoice)
     {
-        //check for account change and clear any existing voting data if the account has changed
-        if(await CheckUserSessionAsync())
-       {
-            throw new InvalidOperationException("Your account has changed. Please request a new credential.");
-       }
 
         //POST request target votes endpoint
         //using  var ensures memory and headers are automatically disposed once executed
@@ -178,6 +150,72 @@ public class VoterApiClient
 
         return voteReceipt;
 
+    }
+
+    //method for requesting original credential recovery using key
+    public async Task<VoteSession?> RecoverBallotAsync(string electionId, string recoveryKey)
+    {
+        //safe guard to ensure electionId is not null or empty use  the defaultElectionId if it is
+        string currentElectionId = string.IsNullOrWhiteSpace(electionId) ? defaultElectionId : electionId;
+
+        //send the blinded credential to the server and request a signed credential and ballot
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"api/elections/{currentElectionId}/credential");
+
+        //the login cookie is included so server can verify voter logged in
+        request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
+
+        //wrap the blinded credential and electionId payload in a CredentialRequest object and serialize to JSON for the request body
+        request.Content = JsonContent.Create(new CredentialRequest
+        {
+            ElectionId = currentElectionId,//*** pass the safeguarded electionId
+            BlindedCredential = string.Empty
+
+        });
+
+        //send the request to the server and wait for the response signed credential and ballot
+        using HttpResponseMessage response = await httpClient.SendAsync(request);
+        //handle unauthorized voter request
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            throw new InvalidOperationException("You must be logged in to request credentials and a ballot.");
+        }
+        if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+        {
+            throw new InvalidOperationException("You are not eligible to request credentials or have already been issued a credential.");
+        }
+        //handle conflict response from server if voter has already been issued a credential for the election
+        if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+        {
+            throw new InvalidOperationException("You have already been issued a credential for this election.");
+        }
+        //ensure the response indicates success
+        response.EnsureSuccessStatusCode();
+
+        //deserialize the response content to a CredentialResponse object which contains signed credential and ballot
+        CredentialResponse result =
+            await response.Content.ReadFromJsonAsync<CredentialResponse>()
+            ?? throw new InvalidOperationException(
+                "Recovery response is empty"
+            );
+        //decryption happens exclusively in the client
+        var client = (BlindCredentialClient)blindVoterClient;
+        //restore the blinding state
+        BlindState restoredState = client.RestoreRecoveryPackage(result.RecoveryPackage,recoveryKey);
+        //remove the blinding from the signed credential
+        string anonymousCredential = await blindVoterClient.UnblindCredentialAsync(
+            // pass the signed ballot creddential and blinding state to unblind method and get signed credential for anonimity whilst voting
+            result.SignedBlindedCredential,
+            restoredState
+        );
+        //return a Vote Session object containin electionId, signed credential 
+        return new VoteSession
+        {
+            ElectionId = result.ElectionId,
+            AnonymousCredential = anonymousCredential,
+            MessageRandomizer = restoredState.MessageRandomizer,
+            VoteChoice = string.Empty,
+            RecoveryKey = recoveryKey
+        };
     }
 
 }

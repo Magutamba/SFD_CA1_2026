@@ -18,6 +18,8 @@ public class VoteSession
     //RFC 9474 randomized prepared message prefix for credential verification
     [Required]
     public string MessageRandomizer {get;set;} = string.Empty;
+    //recovery key to restore the blinding state in case of browser crash or refresh
+    public string RecoveryKey {get;set;} = string.Empty;
     //vote cast by the voter
     [Required]
     // * FIXED: initialize the value to satisfy nullable analysis.

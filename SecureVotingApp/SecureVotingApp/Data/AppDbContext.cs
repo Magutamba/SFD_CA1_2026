@@ -58,6 +58,10 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<AnonBallot>()
             .Property(ballot => ballot.ElectionId)
             .IsRequired();//Ensures that each vote belongs to an election
+        //@author Moïse recovery package is unique to prevent concurrency issues
+        modelBuilder.Entity<IssuedCredential>()
+            .HasIndex(ic => ic.RecoveryPackage)
+            .IsUnique();// addemove unique before migration
     }
 
 }

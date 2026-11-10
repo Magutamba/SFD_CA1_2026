@@ -11,6 +11,8 @@ using Microsoft.EntityFrameworkCore;
 using SecureVotingApp.Data;
 // directive to use the data models for the application
 using SecureVotingApp.Models;
+using System.Linq;
+using System.Security.Cryptography;
 
 // state store to keep track of credential state during vote session
 public class CredentialStateStore
@@ -39,12 +41,13 @@ public class CredentialStateStore
         );
     }
 
-    // record one credential issuance per voter, unique database index prevents duplicate issuance
+    // reserve one issued credential per voter per election to prevent multiple credential issuance
     // async to not block the server thread waiting for the db to connect
-    public async Task<bool> TryMarkIssuedAsync(int userId, string electionId, DateTimeOffset expiresAt)
+    public async Task<bool> ReserveCredentialIssuedAsync(int userId, string electionId, string blindedCredential, string recoveryPackage)
     {
         //reject invalid userId or electionId
-        if (userId <= 0 || string.IsNullOrEmpty(electionId))
+        if (userId <= 0 || string.IsNullOrWhiteSpace(electionId) || string.IsNullOrWhiteSpace(blindedCredential)
+                 || string.IsNullOrWhiteSpace(recoveryPackage))
         {
             return false;
         }
@@ -56,15 +59,14 @@ public class CredentialStateStore
         try
         {
             //check if the voter already as an issued credential
-            var existingCredential = await dbContext.IssuedCredentials.FirstOrDefaultAsync(
+            var credentialReserved = await dbContext.IssuedCredentials.FirstOrDefaultAsync(
                 ic => ic.UserId == userId && ic.ElectionId == electionId
             );
-            // an existing credential prevents new issuance regardless of expiry
-            if (existingCredential != null)
+            // do not create a new credential reservation if one already exists
+            if (credentialReserved != null)
             {
-                    //if the credential is expired the voter cannot reuse it
-                    await transaction.RollbackAsync();
-                    return false;
+                await transaction.RollbackAsync();
+                return false;
             }
 
 
@@ -72,7 +74,11 @@ public class CredentialStateStore
             issuedCredential = new IssuedCredential
             {
                 UserId = userId,
-                ElectionId = electionId
+                ElectionId = electionId,
+                BlindedCredential = blindedCredential,
+                Status = CredentialStatus.Pending,
+                RecoveryPackage = recoveryPackage
+
             };
 
             dbContext.IssuedCredentials.Add(issuedCredential);
@@ -98,17 +104,84 @@ public class CredentialStateStore
         }
 
     }
+    //retrieve an existing issued credential or completed issuance
+    public async Task<IssuedCredential?> GetExistingIssuedCredentialAsync(int userId, string electionId)
+    {
+        //reject invalid userId or electionId
+        if (userId <= 0 || string.IsNullOrWhiteSpace(electionId))
+        {
+            return null;
+        }
+        //only retrieve the issued credential belonging to the authenticated user
+        return await dbContext.IssuedCredentials.AsNoTracking().SingleOrDefaultAsync(ic =>
+            ic.UserId == userId && ic.ElectionId == electionId
+        );
+    }
+
+    //complete a pending reservation after successful signing
+    public async Task<bool> CompleteIssuedCredentialAsync(int userId, string electionId, string signedBlindedCredential)
+    {
+        //reject invalid userId or electionId
+        if (userId <= 0 || string.IsNullOrWhiteSpace(electionId) || string.IsNullOrWhiteSpace(signedBlindedCredential))
+        {
+            return false;
+        }
+        //retrieve the pending issued credential for the user and election
+        var issuedCredential = await dbContext.IssuedCredentials.SingleOrDefaultAsync(ic =>
+            ic.UserId == userId && ic.ElectionId == electionId && ic.Status == CredentialStatus.Pending
+        );
+        if (issuedCredential == null)
+        {
+            return false;
+        }
+        //update the issued credential with the signed blinded credential and mark as issued
+        issuedCredential.SignedBlindedCredential = signedBlindedCredential;
+        //change the server controlled status to issued
+        issuedCredential.Status = CredentialStatus.Issued;
+        //persist the completed issuance
+        await dbContext.SaveChangesAsync();
+        return true;
+    }
+    //retrieve original issued credential for recovery using recoveryId and electionId
+    public async Task<IssuedCredential?> GetRecoveryCredentialAsync(int userId, string electionId)
+    {
+        //reject invalid userId or electionId
+        if (userId <= 0 || string.IsNullOrWhiteSpace(electionId))
+        {
+            return null;
+        }
+        //retrieve the issued credential for the user and election 
+        var record = await GetExistingIssuedCredentialAsync(userId, electionId);
+        if(record== null || record.Status != CredentialStatus.Issued )
+        {
+            return null;
+        }
+
+          return record;
+    }
     //release an issued credential if signing fails before successful issuance
     public async Task ReleaseIssuedCredentialAsync(int userId, string electionId)
     {
         //reject invalid userId or electionId
-        if (userId <= 0 || string.IsNullOrEmpty(electionId))
+        if (userId <= 0 || string.IsNullOrWhiteSpace(electionId))
         {
             return;
         }
-        //atomically remove the exact issued credential 
-        await dbContext.IssuedCredentials.Where(ic => 
+        //atomically remove the pending record,  
+        await dbContext.IssuedCredentials.Where(ic =>
                 ic.UserId == userId && ic.ElectionId == electionId &&
-                  ic.ExpiresAt == expiresAt).ExecuteDeleteAsync();
+                  ic.Status == CredentialStatus.Pending).ExecuteDeleteAsync();
+    }
+
+        //decodes a  raw base64 string back into a raw byte array for cryptographic operations 
+    private static byte[] Base64UrlDecoder(string data)
+    {
+        //replace url safe characters into standar base64 characters
+        string padded = data.Replace('-', '+').Replace('_', '/');
+
+        //pad the string with '-' character so its a mutliple of 4
+        padded += new string('=', (4 - padded.Length % 4) % 4);
+
+        return Convert.FromBase64String(padded);
     }
 }

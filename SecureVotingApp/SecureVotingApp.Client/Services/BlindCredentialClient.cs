@@ -19,10 +19,19 @@ using Org.BouncyCastle.Math;
 //engine for RSA encryption and decryption
 using Org.BouncyCastle.Crypto.Engines;
 using SecureVotingApp.Client.Contracts;
+using System.Text.Json;
 //logical namespace for grouping services components together
 namespace SecureVotingApp.Client.Services;
 
+
 // blind random credential payload to server
+public class RecoveryMaterial
+{
+    //recovery key
+    public string RecoveryKey {get;set;} = string.Empty;
+    //recovery package
+    public string RecoveryPackage {get;set;} = string.Empty;
+}
 public class BlindCredentialClient : IBlindCredentialClient
 {
     // instance of HttpClient to send requests to the server
@@ -255,6 +264,78 @@ public class BlindCredentialClient : IBlindCredentialClient
         }
         // return the unblinded credential as a base64 url encoded string to the client
         return Base64UrlEncode(fixedLenUnBlinded);
+    }
+
+    //method to generate random recovery key and encrypt blind state
+    public RecoveryMaterial CreateRecoveryMaterial(BlindState state)
+    {
+        if(state == null)
+        {
+            throw new InvalidOperationException("Invalid blind state");
+        }
+        //generate a random 32 byte recovery key for encrypting the blind state
+        byte[] recoveryKey = RandomNumberGenerator.GetBytes(32);
+        //encrypt the blind state using AES-GCM with the recovery key
+        byte[] plainText = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(state);
+
+        //generate a random 12 byte nonce for AES-GCM encryption
+        byte [] nonce = RandomNumberGenerator.GetBytes(12);
+
+        // ciphertext will be the same length as the plaintext
+        byte [] cipherText = new byte[plainText.Length];
+        // tag is 16 bytes for AES-GCM authentication
+        byte [] tag = new byte[16];
+        // use AES-GCM to encrypt the blind state with the recovery key and nonce, producing ciphertext and authentication tag
+        using (var aesGcm = new AesGcm(recoveryKey))
+        {
+            aesGcm.Encrypt(nonce, plainText, cipherText, tag);
+        }
+        // combine the nonce, ciphertext, and tag into a single package
+        byte[] package = new byte[nonce.Length + cipherText.Length + tag.Length];
+
+        // copy the nonce, ciphertext, and tag into the package in order
+        Buffer.BlockCopy(nonce,0, package, 0, nonce.Length);
+        //
+        Buffer.BlockCopy(cipherText, 0, package, nonce.Length, cipherText.Length);
+        //
+        Buffer.BlockCopy(tag, 0, package, nonce.Length + tag.Length, tag.Length);
+
+        // return the recovery key and encrypted package as base64 url encoded strings to the client
+        return new RecoveryMaterial
+        {
+            RecoveryKey = Base64UrlEncode(recoveryKey),
+            RecoveryPackage = Base64UrlEncode(package)
+        };     
+
+    }
+    // method to decrypt the encrypted package
+    public BlindState RestoreRecoveryPackage(string recoveryKey, string recoveryPackage)
+    {
+        // decode the base64 url encoded recovery key and package into raw byte arrays
+        byte[] key = Base64UrlDecode(recoveryKey);
+        // decode the base64 url encoded recovery package into raw byte array
+        byte[] package = Base64UrlDecode(recoveryPackage);
+
+        // validate the recovery key length
+        if(key.Length != 32)
+        {
+            throw new InvalidOperationException("Invalid recovery information");
+        }
+        // extraction
+        byte[] nonce = package[..12];
+        byte[] cipherText = package[12..28];
+        byte[] tag = package[28..];
+
+        byte[] plainText = new byte[cipherText.Length];
+        using (var aesGcm = new AesGcm(key))
+        {
+            aesGcm.Decrypt(nonce, cipherText, tag, plainText);
+        }
+
+        return System.Text.Json.JsonSerializer.Deserialize<BlindState>(plainText)
+            ?? throw new InvalidOperationException("Unable to restore blind state from recovery package.");
+
+        
     }
 
     //helper method to decode base64 url encoded string into a byte array
