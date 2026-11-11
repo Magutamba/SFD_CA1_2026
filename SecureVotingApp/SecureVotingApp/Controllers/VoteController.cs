@@ -94,7 +94,16 @@ public class VoteController : ControllerBase
         {
             return BadRequest("Invalid request data, missing.");
         }
+        
+        //Author Aaron Byrne- Only allow a user to vote Yes or No as a vote
+        string voteChoice = request.VoteChoice.Trim();
 
+        if (!voteChoice.Equals("Yes", StringComparison.OrdinalIgnoreCase) &&
+            !voteChoice.Equals("No", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest("Invalid voting choice. Your vote must be either Yes or No");
+        }
+        
         //***safe guard to ensure electionId is not null or empty use  the defaultElectionId if it is
         string electionId = string.IsNullOrWhiteSpace(request.ElectionId) ? defaultElectionId : request.ElectionId;
         //variable for signed credential bytes
@@ -152,7 +161,7 @@ public class VoteController : ControllerBase
             //Author Aaron Byrne- When a valid vote has been submitted, create a new anon ballot and save it to the database
             dbContext.AnonBallots.Add(new AnonBallot
             {
-                VoteChoice = request.VoteChoice,
+                VoteChoice = voteChoice.Equals("Yes", StringComparison.OrdinalIgnoreCase) ? "Yes" : "No",
                 ElectionId = electionId,
             });
             await dbContext.SaveChangesAsync();
