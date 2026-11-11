@@ -10,7 +10,13 @@
 <h3>Account</h3>
 <AuthorizeView>
     <Authorized>
-        <p>Logged into system. Welcome</p>
+        
+        <p>Logged into system. Please click the following link to cast your ballot.</p>
+
+        <NavLink class="nav-link" href="vote">
+            <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Vote Link
+        </NavLink>
+
         <button type="submit" @onclick="@Logout">Logout</button>
         <p role="status">@_message</p>
     </Authorized>
