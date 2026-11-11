@@ -283,13 +283,16 @@ public class BlindCredentialClient : IBlindCredentialClient
         //generate a random 12 byte nonce for AES-GCM encryption
         byte [] nonce = RandomNumberGenerator.GetBytes(12);
 
-        // use AES-GCM to encrypt the blind state with the recovery key and nonce, producing ciphertext and authentication tag
+        // use AES-256-GCM to encrypt the blind state with the recovery key and nonce, producing ciphertext and authentication tag
         var cipher = new GcmBlockCipher(new AesEngine());
         //intialize the cipher for encryption with the recovery key and nonce, specifying the authentication tag length of 128 bits
         cipher.Init(true, new AeadParameters(new KeyParameter(recoveryKey), 128, nonce));
+        //byte array to hold the cipher text and authentication tag
         byte[] output = new byte[cipher.GetOutputSize(plainText.Length)];
-        int len = cipher.ProcessBytes(plainText, 0, plainText.Length, output,0);
-        cipher.DoFinal(output, len);
+        //encrypt the blind state and write the result to the output buffer, return number of bytes written
+        int bytesWritten = cipher.ProcessBytes(plainText, 0, plainText.Length, output,0);
+        // finalize the encryption append the authentication tag for verification
+        cipher.DoFinal(output, bytesWritten);
         // combine the nonce, ciphertext, and tag into a single package
         byte[] package = new byte[nonce.Length + output.Length];
 
@@ -322,20 +325,19 @@ public class BlindCredentialClient : IBlindCredentialClient
         // extraction
         byte[] nonce = package[..12];
         byte[] cipherTextWithTag = package[12..];
-        //use AES-GCM to decrypt the blind state with the recovery key and nonce producing plaintext
+        //use AES-256-GCM to decrypt the blind state with the recovery key and nonce producing plaintext
         var cipher = new GcmBlockCipher(new AesEngine());
-        //initialize the ciipher for decryption with the recovery key and nonce, specifying the authentication tag length of 128 bits
+        //initialize the cipher for decryption with the recovery key and nonce, specifying the authentication tag length of 128 bits
         cipher.Init(false, new AeadParameters(new KeyParameter(key), 128, nonce));
         //a byte array holds the decrypt plaintext
         byte[] plainText = new byte[cipher.GetOutputSize(cipherTextWithTag.Length)];
-        //
-        int len = cipher.ProcessBytes(cipherTextWithTag, 0, cipherTextWithTag.Length, plainText, 0);
-        cipher.DoFinal(plainText, len);
-
+        //decrypt the blind state and write the result to the output buffer, return number of bytes written
+        int bytesWritten = cipher.ProcessBytes(cipherTextWithTag, 0, cipherTextWithTag.Length, plainText, 0);
+        //finalize the decryption and append the authentication tag for verification
+        cipher.DoFinal(plainText, bytesWritten);
+        // decrypt the plaintext back into a BlindState object and return it to the client
         return System.Text.Json.JsonSerializer.Deserialize<BlindState>(plainText)
             ?? throw new InvalidOperationException("Unable to restore blind state from recovery package.");
-
-        
     }
 
     //helper method to decode base64 url encoded string into a byte array

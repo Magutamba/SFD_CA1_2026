@@ -27,172 +27,168 @@ prerender: false))
         {
             <div class="alert alert-danger">
                 <strong>Error:</strong>@errorMessage
-                <button type="button" class="btn-close" @onclick="()" </div>
-                }
+                <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty">
 
-                @if (!string.IsNullOrEmpty(errorMessage))
-                {
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <strong>Error:</strong> @errorMessage
-                        <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
-                    </div>
-                }
-                @*Session is empty*@
-                @if (session == null)
-                {
-                    @*Request fresh ballot or recover existing session*@
-                    <div class="card">
-                        <h3 class="card-title"> Ballot Issuance & Recovery</h3>
-                        <p class="card-text">
-                            Request a new voting credential or recover an existing credential using your recovery key.
-                        </p>
-                        <div>
-                            <button class="btn btn-primary" @onclick="RequestBallot" disabled="@isLoading">
-                                @if (isLoading && !isRecoverMode)
-                                {
-                                    <span class="spinner-border spinner-border-sm"></span>
-                                    <span>Issuing Ballot...</span>
-                                }
-                                else
-                                {
-                                    <span>Request New Ballot</span>
-                                }
-                            </button>
-                            <button class="btn btn-primary" @onclick="ToggleRecoveryMode" disabled="@isLoading">
-                                @isRecoverMode ? "Cancel Recovery" : "Recover Existing Ballot"
-                            </button>
-                        </div>
-                    </div>
-                }
-                @if (isRecoverMode)
-                {
-                    @*Recovery Input Form*@
-                    <div class="card mb-4" <div class="card-header">
-                        <h3>Recover Issued Ballot Session</h3>
+                </button>
+            </div>
+        }
+        @*Session is empty*@
+        @if (session == null)
+        {
+            @*Request fresh ballot or recover existing session*@
+            <div class="card">
+                <h3 class="card-title"> Ballot Issuance & Recovery</h3>
+                <p class="card-text">
+                    Request a new voting credential or recover an existing credential using your recovery key.
+                </p>
+                <div>
+                    <button class="btn btn-primary" @onclick="RequestBallot" disabled="@isLoading">
+                        @if (isLoading && !isRecoverMode)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                            <span>Issuing Ballot...</span>
+                        }
+                        else
+                        {
+                            <span>Request New Ballot</span>
+                        }
+                    </button>
+                    <button class="btn btn-primary" @onclick="ToggleRecoveryMode" disabled="@isLoading">
+                        @isRecoverMode ? "Cancel Recovery" : "Recover Existing Ballot"
+                    </button>
+                </div>
+            </div>
+        }
+        @if (isRecoverMode)
+        {
+            @*Recovery Input Form*@
+            <div class="card mb-4" <div class="card-header">
+                <h3>Recover Issued Ballot Session</h3>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="recoveryKeyInput class=" form-label>Enter Recovery Key</label>
+            <textarea id="recoveryKeyInpyt" class="form-label placeholder=" Paste your recovery key..."
+                      @bind="inputRecoveryKey">
+                    </textarea>
+            <div class=form-text">
+                Your recovery key allows you to vote even if reload web browser or connection drops. Cannot vote twice.
+            </div>
+
+
+        </div>
+        <button class=btn btn-success" @onclick="RecoverBallot"
+                disabled="@(isLoading || string.IsNullOrWhiteSpace(inputRecoveryKey))">
+            @if (isLoading)
+            {
+                <span class="spinner-border spinner-border-sm" </span>
+                <span>Decrypting session</span>
+            }
+            else
+            {
+                <span>Restore Ballot</span>
+            }
+        </button>
+    </div>
+</div>
+</div>
+    }
+}
+else if (receipt==null)
+{
+@*Active Vote session & Recovery key Display*@
+    @if (!string.IsNullOrEmpty(session.RecoveryKey))
+{
+    <div class="card mb-4">
+        <div class="card-header">
+            Recovery Key automatically downloaded on your system
+            <div>
+                <div>
+                    <p>
+                        If your broswer refreshes or you must login from another device, use the recovery key
+                    </p>
+                    <div class="input-group mb2">
+                        <input type="text" class="form-control" value="@session.RecoveryKey" readonly />
+                        
                     </div>
                 </div>
-                <div class="mb-3">
-                    <label for="recoveryKeyInput class=" form-label>Enter Recovery Key</label>
-                    <textarea id="recoveryKeyInpyt" class="form-label placeholder=" Paste your recovery key..."
-                              @bind="inputRecoveryKey">
-                </textarea>
-                    <div class=form-text">
-                        Your recovery key allows you to vote even if reload web browser or connection drops. Cannot vote twice.
-                    </div>
-
-
-                </div>
-                <button class=btn btn-success" @onclick="RecoverBallot"
-                        disabled="@(isLoading || string.IsNullOrWhiteSpace(inputRecoveryKey))">
+            </div>
+            }
+            @*Vote Submission Form*@
+            <div class="card" mb-4>
+                <h5>Cast your Ballot</h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-success" @onclick="SubmitVote"
+                        disabled="@(isLoading || string.IsNullOrWhiteSpace(voteChoice))">
                     @if (isLoading)
                     {
                         <span class="spinner-border spinner-border-sm" </span>
-                        <span>Decrypting session</span>
+                        <span>Submitting vote anonymously...</span>
                     }
                     else
                     {
-                        <span>Restore Ballot</span>
+                        <span>Submit Ballot</span>
                     }
                 </button>
             </div>
         </div>
-    }
-    }
-    else if (receipt==null)
-    {
-    @*Active Vote session & Recovery key Display*@
-    @if (!string.IsNullOrEmpty(session.RecoveryKey))
-    {
-        <div class="card mb-4">
-            <div class="card-header">
-                Recovery Key automatically downloaded on your system
-                <div>
-                    <div>
-                        <p>
-                            If your broswer refreshes or you must login from another device, use the recovery key
-                        </p>
-                        <div class="input-group mb2">
-                            <input type="text" class="form-control" value="@session.RecoveryKey" readonly />
-                        
-                        </div>
-                    </div>
-                </div>
-                }
-                @*Vote Submission Form*@
-                <div class="card" mb-4>
-                    <h5>Cast your Ballot</h5>
-                </div>
-                <div class="card-body">
-                    <button class="btn btn-success" @onclick="SubmitVote"
-                            disabled="@(isLoading || string.IsNullOrWhiteSpace(voteChoice))">
-                        @if (isLoading)
-                        {
-                            <span class="spinner-border spinner-border-sm" </span>
-                            <span>Submitting vote anonymously...</span>
-                        }
-                        else
-                        {
-                            <span>Submit Ballot</span>
-                        }
-                    </button>
-                </div>
+        }
+        }
+        }
+
+        <!-- Vote Submission Form -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Cast Your Ballot</h5>
             </div>
-            }
-            }
-            }
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="voteChoiceInput" class="form-label fw-bold">Enter Your Choice:</label>
+                    <select>
+                        <option value="Yes" id="voteChoiceSelect" class="form-control" placeholder="Type your vote here..."
+                                @bind="selectedChoice" @bind:event="oninput">Yes
 
-            <!-- Vote Submission Form -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Cast Your Ballot</h5>
+                        </option>
+                        <option value="No" id="voteChoiceSelect" class="form-control" @bind="selectedChoice"
+                                @bind:event="oninput">No
+
+                        </option>
+                    </select>
                 </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label for="voteChoiceInput" class="form-label fw-bold">Enter Your Choice:</label>
-                        <select>
-                            <option value="Yes" id="voteChoiceSelect" class="form-control" placeholder="Type your vote here..."
-                                    @bind="selectedChoice" @bind:event="oninput">Yes
 
-                            </option>
-                            <option value="No" id="voteChoiceSelect" class="form-control" @bind="selectedChoice"
-                                    @bind:event="oninput">No
-
-                            </option>
-                        </select>
-                    </div>
-
-                    <button class="btn btn-success w-100" @onclick="SubmitVote"
-                            disabled="@(isLoading || string.IsNullOrWhiteSpace(voteChoice))">
-                        @if (isLoading)
-                        {
-                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-                            <span>Submitting Vote Anonymously...</span>
-                        }
-                        else
-                        {
-                            <span>Submit Ballot</span>
-                        }
-                    </button>
-                </div>
-            </div>
-            }
-            else{
-            <!-- Vote Submitted Receipt -->
-            <div class="card border-success mb-4">
-                <div class="card-header ">
-                    <h3>Vote Submitted Successfully</h3>
-                </div>
-                <div class="card-body">
-                    <p>Your anonymous vote as been cast</p>
-                    @if (!string.IsNullOrEmpty(receipt.ReceiptId))
+                <button class="btn btn-success w-100" @onclick="SubmitVote"
+                        disabled="@(isLoading || string.IsNullOrWhiteSpace(voteChoice))">
+                    @if (isLoading)
                     {
-                        <p><strong>Receipt ID:</strong>@receipt.ReceiptId</p>
+                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        <span>Submitting Vote Anonymously...</span>
                     }
-                    <button class="btn btn-primary" @onclick="ResetForm">Return to start</button>
-                </div>
+                    else
+                    {
+                        <span>Submit Ballot</span>
+                    }
+                </button>
             </div>
-            }
         </div>
+        }
+        else{
+        <!-- Vote Submitted Receipt -->
+        <div class="card border-success mb-4">
+            <div class="card-header ">
+                <h3>Vote Submitted Successfully</h3>
+            </div>
+            <div class="card-body">
+                <p>Your anonymous vote as been cast</p>
+                @if (!string.IsNullOrEmpty(receipt.ReceiptId))
+                {
+                    <p><strong>Receipt ID:</strong>@receipt.ReceiptId</p>
+                }
+                <button class="btn btn-primary" @onclick="ResetForm">Return to start</button>
+            </div>
+        </div>
+        }
+    </div>
 
 @code {
     //state variables for the voting session and receipt
