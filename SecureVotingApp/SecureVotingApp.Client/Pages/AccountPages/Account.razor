@@ -13,10 +13,10 @@
         
         <p>Logged into system. Please click the following link to cast your ballot.</p>
 
-        <NavLink class="nav-link" href="vote">
+        <NavLink class="nav-link" href="vote" style ="color:blue">
             <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Vote Link
         </NavLink>
-
+        <br/>
         <button type="submit" @onclick="@Logout">Logout</button>
         <p role="status">@_message</p>
     </Authorized>
@@ -25,7 +25,7 @@
         <NavLink class="nav-link" href="login" style="color:blue">
             <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> <u>Login Link</u>
         </NavLink>
-
+        
         <NavLink class="nav-link" href="register" style="color:blue">
             <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> <u>Register Link</u>
         </NavLink>
