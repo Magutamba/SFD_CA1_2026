@@ -18,79 +18,84 @@ prerender: false))
 
 <PageTitle>Vote</PageTitle>
 
-<div class="container my-4" style="max-width: 650px;">
+<div class="container mb-4" style="max-width: 650px;">
     <div class="text-center mb-4">
 
         <h2>Vote Anonymously</h2>
+    </div>
 
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="alert alert-danger">
-                <strong>Error:</strong>@errorMessage
-                <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty">
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">
+            <strong>Error:</strong>@errorMessage
+            <button type="button" class="btn-close float-end" @onclick="() => errorMessage = string.Empty">
 
+            </button>
+        </div>
+    }
+    @*Session is empty*@
+    @if (session == null && receipt == null)
+    {
+        @*Request fresh ballot or recover existing session*@
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title"> Ballot Issuance & Recovery</h3>
+            </div class="card-body">
+            <p class="card-text">
+                Request a new voting credential or recover an existing credential using your recovery key.
+            </p>
+            <div>
+                <button class="btn btn-primary" @onclick="RequestBallot" disabled="@isLoading">
+                    @if (isLoading && !isRecoverMode)
+                    {
+                        <span class="spinner-border spinner-border-sm"></span>
+                        <span>Issuing Ballot...</span>
+                    }
+                    else
+                    {
+                        <span>Request New Ballot</span>
+                    }
+                </button>
+                @*Toggle recovery mode*@
+                <button class="btn btn-primary" @onclick="ToggleRecoveryMode" disabled="@isLoading">
+                    @isRecoverMode ? "Cancel Recovery" : "Recover Existing Ballot"
                 </button>
             </div>
-        }
-        @*Session is empty*@
-        @if (session == null)
-        {
-            @*Request fresh ballot or recover existing session*@
-            <div class="card">
-                <h3 class="card-title"> Ballot Issuance & Recovery</h3>
-                <p class="card-text">
-                    Request a new voting credential or recover an existing credential using your recovery key.
-                </p>
-                <div>
-                    <button class="btn btn-primary" @onclick="RequestBallot" disabled="@isLoading">
-                        @if (isLoading && !isRecoverMode)
-                        {
-                            <span class="spinner-border spinner-border-sm"></span>
-                            <span>Issuing Ballot...</span>
-                        }
-                        else
-                        {
-                            <span>Request New Ballot</span>
-                        }
-                    </button>
-                    <button class="btn btn-primary" @onclick="ToggleRecoveryMode" disabled="@isLoading">
-                        @isRecoverMode ? "Cancel Recovery" : "Recover Existing Ballot"
-                    </button>
-                </div>
-            </div>
-        }
-        @if (isRecoverMode)
-        {
-            @*Recovery Input Form*@
-            <div class="card mb-4" <div class="card-header">
-                <h3>Recover Issued Ballot Session</h3>
-            </div>
         </div>
-        <div class="mb-3">
+    }
+    @if (isRecoverMode)
+    {
+        @*Recovery Input Form*@
+        <div class="card mb-4">
+            
+            <div class="card-header mb-4">
+                <h3>Recover Issued Ballot Session</h3>
+        </div>
+    </div>
+    <div class="card-body ">
             <label for="recoveryKeyInput class=" form-label>Enter Recovery Key</label>
-            <textarea id="recoveryKeyInpyt" class="form-label placeholder=" Paste your recovery key..."
-                      @bind="inputRecoveryKey">
-                    </textarea>
-            <div class=form-text">
+            <textarea id="recoveryKeyInpyt" class="form-label rows=" 3" placeholder=" Paste your recovery key..."
+                    @bind="inputRecoveryKey">
+                        </textarea>
+            <div class=form-text mb-3">
                 Your recovery key allows you to vote even if reload web browser or connection drops. Cannot vote twice.
             </div>
 
-
         </div>
-        <button class=btn btn-success" @onclick="RecoverBallot"
-                disabled="@(isLoading || string.IsNullOrWhiteSpace(inputRecoveryKey))">
-            @if (isLoading)
-            {
-                <span class="spinner-border spinner-border-sm" </span>
-                <span>Decrypting session</span>
-            }
-            else
-            {
-                <span>Restore Ballot</span>
-            }
-        </button>
+            @*Recover Existing Ballot*@
+            <button class=btn btn-success" @onclick="RecoverBallot"
+                    disabled="@(isLoading || string.IsNullOrWhiteSpace(inputRecoveryKey))">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm"> </span>
+                    <span>Decrypting session</span>
+                }
+                else
+                {
+                    <span>Restore Ballot</span>
+                }
+            </button>
     </div>
-</div>
 </div>
     }
 }
@@ -189,6 +194,7 @@ else if (receipt==null)
         </div>
         }
     </div>
+</div>
 
 @code {
     //state variables for the voting session and receipt
