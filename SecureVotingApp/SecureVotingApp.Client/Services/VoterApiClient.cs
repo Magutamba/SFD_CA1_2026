@@ -140,7 +140,7 @@ public class VoterApiClient
         using HttpResponseMessage response = await httpClient.SendAsync(request);
         if(response.StatusCode == System.Net.HttpStatusCode.Conflict)
         {
-           throw new InvalidOperationException("This voting credential  has already been used to vote, you cannot.");
+           throw new InvalidOperationException("This voting credential  has already been used to vote, you cannot vote again.");
         }
         if(response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
         {

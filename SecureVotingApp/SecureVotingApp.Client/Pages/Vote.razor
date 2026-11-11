@@ -226,6 +226,12 @@ prerender: false))
         {
             return;
         }
+        //validate vote 
+        if(string.IsNullOrWhiteSpace(voteChoice)|| (voteChoice != "Yes" && voteChoice != "No"))
+        {
+            errorMessage = "Invalid vote choice. Please select 'Yes' or 'No'." ;
+            return;
+        }
         //reset loading state and error message
         isLoading = true;
         errorMessage = string.Empty;
