@@ -289,6 +289,10 @@ public class BlindCredentialClient : IBlindCredentialClient
         byte[] associatedData = System.Text.Encoding.UTF8.GetBytes(electionId);
         //generate a random 12 byte nonce for AES-GCM encryption
         byte[] nonce = RandomNumberGenerator.GetBytes(12);
+
+        //? allows nullable
+        byte[]? package = null;
+        byte[]? output = null;
         try
         {
             // use AES-256-GCM to encrypt the blind state with the recovery key and nonce, producing ciphertext and authentication tag
@@ -297,13 +301,13 @@ public class BlindCredentialClient : IBlindCredentialClient
             //associatedData included when initializing cipher to ensure the recovery package is bound to the specific electionId
             cipher.Init(true, new AeadParameters(new KeyParameter(recoveryKey), 128, nonce, associatedData));
             //byte array to hold the cipher text and authentication tag
-            byte[] output = new byte[cipher.GetOutputSize(plainText.Length)];
+            output = new byte[cipher.GetOutputSize(plainText.Length)];
             //encrypt the blind state and write the result to the output buffer, return number of bytes written
             int bytesWritten = cipher.ProcessBytes(plainText, 0, plainText.Length, output, 0);
             // finalize the encryption append the authentication tag for verification
             cipher.DoFinal(output, bytesWritten);
             // combine the nonce, ciphertext, and tag into a single package
-            byte[] package = new byte[nonce.Length + output.Length];
+            package = new byte[nonce.Length + output.Length];
 
             // copy the nonce, ciphertext, and tag into the package in order
             Buffer.BlockCopy(nonce, 0, package, 0, nonce.Length);
@@ -325,7 +329,15 @@ public class BlindCredentialClient : IBlindCredentialClient
         }
         finally
         {
-            //clear the key and plaintext from memory to prevent data leakage
+            //cleanup regardless of success or failure 
+            if (output != null)
+            {
+                CryptographicOperations.ZeroMemory(output);
+            }
+            if (package != null)
+            {
+                CryptographicOperations.ZeroMemory(package);
+            }
             CryptographicOperations.ZeroMemory(recoveryKey);
             CryptographicOperations.ZeroMemory(plainText);
 
@@ -345,15 +357,20 @@ public class BlindCredentialClient : IBlindCredentialClient
             throw new InvalidOperationException("Invalid electionId for recovery");
         }
         //? allows nullable
-         byte[]? key = null;
-         byte[]? plainText = null;
+        byte[]? key = null;
+        byte[]? plainText = null;
+        byte[]? actualPlainText = null;
+        byte[]? package = null;
+        byte[]? nonce = null;
+        byte[]? cipherTextWithTag = null;
+
 
         try
         {
             // decode the base64 url encoded recovery key and package into raw byte arrays
-             key = Base64UrlDecode(recoveryKey);
+            key = Base64UrlDecode(recoveryKey);
             // decode the base64 url encoded recovery package into raw byte array
-            byte [] package = Base64UrlDecode(recoveryPackage);
+            package = Base64UrlDecode(recoveryPackage);
 
             // validate the recovery key length
             if (key.Length != 32 || package.Length < 12 + 16 + 1)
@@ -361,8 +378,8 @@ public class BlindCredentialClient : IBlindCredentialClient
                 throw new InvalidOperationException("Invalid recovery information");
             }
             // extraction
-            byte[] nonce = package[..12];
-            byte[] cipherTextWithTag = package[12..];
+            nonce = package[..12];
+            cipherTextWithTag = package[12..];
 
             //use AES-256-GCM to decrypt the blind state with the recovery key and nonce producing plaintext
             var cipher = new GcmBlockCipher(new AesEngine());
@@ -379,26 +396,17 @@ public class BlindCredentialClient : IBlindCredentialClient
             //calculate actual encrypted data length
             int totalBytes = bytesWritten + finalBytes;
             //slice exact decrypted plaintext and remove allocated  buffer padding
-            byte[] actualPlainText = plainText[..totalBytes];
-            //ensure plainText is cleared from memory after deserialization to prevent sensitive data leaks
-            try
+            actualPlainText = plainText[..totalBytes];
+            //ensure plainText is cleared from memory after deserialization to prevent sensitive data leak
+            // decrypt the plaintext back into a BlindState object and return it to the client
+            BlindState restoredState = System.Text.Json.JsonSerializer.Deserialize<BlindState>(actualPlainText)
+                ?? throw new InvalidOperationException("Unable to restore blind state from recovery package.");
+            //validate the restored blind state electionId
+            if (string.IsNullOrWhiteSpace(restoredState.ElectionId) || restoredState.ElectionId != electionId)
             {
-
-                // decrypt the plaintext back into a BlindState object and return it to the client
-                BlindState restoredState = System.Text.Json.JsonSerializer.Deserialize<BlindState>(actualPlainText)
-                    ?? throw new InvalidOperationException("Unable to restore blind state from recovery package.");
-                //validate the restored blind state electionId
-                if (string.IsNullOrWhiteSpace(restoredState.ElectionId) || restoredState.ElectionId != electionId)
-                {
-                    throw new InvalidOperationException("Missing ElectionId or mismatch");
-                }
-                return restoredState;
+                throw new InvalidOperationException("Missing ElectionId or mismatch");
             }
-            finally
-            {
-                //clear temporary copy
-                CryptographicOperations.ZeroMemory(actualPlainText);
-            }
+            return restoredState;
 
         }
         //catch any Base 64 input
@@ -432,6 +440,22 @@ public class BlindCredentialClient : IBlindCredentialClient
             if (plainText != null)
             {
                 CryptographicOperations.ZeroMemory(plainText);
+            }
+            if (package != null)
+            {
+                CryptographicOperations.ZeroMemory(package);
+            }
+            if (nonce != null)
+            {
+                CryptographicOperations.ZeroMemory(nonce);
+            }
+            if (cipherTextWithTag != null)
+            {
+                CryptographicOperations.ZeroMemory(cipherTextWithTag);
+            }
+            if (actualPlainText != null)
+            {
+                CryptographicOperations.ZeroMemory(actualPlainText);
             }
         }
     }
