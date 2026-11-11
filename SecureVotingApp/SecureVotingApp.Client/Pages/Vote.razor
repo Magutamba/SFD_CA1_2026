@@ -120,15 +120,12 @@ else if (receipt==null)
             </div>
             }
             @*Vote Submission Form*@
-            <div class="card" mb-4>
                 <h5>Cast your Ballot</h5>
-            </div>
-            <div class="card-body">
                 <button class="btn btn-success" @onclick="SubmitVote"
                         disabled="@(isLoading || string.IsNullOrWhiteSpace(voteChoice))">
                     @if (isLoading)
                     {
-                        <span class="spinner-border spinner-border-sm" </span>
+                        <span class="spinner-border spinner-border-sm" ></span>
                         <span>Submitting vote anonymously...</span>
                     }
                     else
@@ -138,8 +135,6 @@ else if (receipt==null)
                 </button>
             </div>
         </div>
-        }
-        }
         }
 
         <!-- Vote Submission Form -->
@@ -177,7 +172,7 @@ else if (receipt==null)
             </div>
         </div>
         }
-        else{
+        @if(receipt != null){
         <!-- Vote Submitted Receipt -->
         <div class="card border-success mb-4">
             <div class="card-header ">
@@ -194,7 +189,6 @@ else if (receipt==null)
         </div>
         }
     </div>
-</div>
 
 @code {
     //state variables for the voting session and receipt
