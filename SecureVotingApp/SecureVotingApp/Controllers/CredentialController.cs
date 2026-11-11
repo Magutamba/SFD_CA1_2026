@@ -41,13 +41,13 @@ public class CredentialController : ControllerBase
 
     //handle post request to issue a signed credential for the voter, FromBody attribute indicates the request body will be deserialized into the CredentialRequest object
     [HttpPost]
-    public async Task<IActionResult> IssueCredential(string electionId,[FromBody]CredentialRequest request)
+    public async Task<IActionResult> IssueCredential(string electionId, [FromBody] CredentialRequest request)
     {
         //Authorize validate the login cookie
-        string ?userIdValue = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        
+        string? userIdValue = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
         //if the userId claim is missing or invalid return unauthorized
-        if(!int.TryParse(userIdValue, out int userId))
+        if (!int.TryParse(userIdValue, out int userId))
         {
             return Unauthorized();
         }
@@ -55,13 +55,14 @@ public class CredentialController : ControllerBase
         try
         {
             //request credential service to sign blinded credential
-            CredentialResponse result = await credentialService.IssueAsync(userId,electionId,request);
+            CredentialResponse result = await credentialService.IssueAsync(userId, electionId, request);
 
             return Ok(result);
-        }catch(Exception e)
+        }
+        catch (Exception e)
         {
             //return conflict if the user already received a credential for this election
-            return Conflict(new {message = e.Message});
+            return Conflict(new { message = e.Message });
         }
     }
 }

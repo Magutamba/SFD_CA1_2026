@@ -1,34 +1,37 @@
 //@author Moïse
-// classes for converting strings to and from byte arrays 
-using System.Text;
-//
+// directive for core fundamental types and base classes
 using System;
-//
-using System.Collections.Generic;
-//
-//
+//directives to use cryptographic primitives such as SHA384 and RSA
 using System.Security.Cryptography;
+//directives to support asynchronous programming and tasks
 using System.Threading.Tasks;
 //interface and classes for cryptographic algorithms in BouncyCastle RSA
 using Org.BouncyCastle.Crypto;
-//low level cipher engine for RSA RsaEngines
-using Org.BouncyCastle.Crypto.Engines;
-//cryptographic key parameter for RSA orivate key
+//cryptographic key parameter for RSA private key
 using Org.BouncyCastle.Crypto.Parameters;
 //BigInteger class for RSA arithmetic
 using Org.BouncyCastle.Math;
 //utility class for converting between byte arrays and BigInteger PEM file parsing
 using Org.BouncyCastle.OpenSsl;
-
+//provides MVC and web API functionality API controller, HTTP request handlers
 using Microsoft.AspNetCore.Mvc;
-
+// bouncy caste signers and digests for RFC 9474 compliant EMSA-PSS verification
+using Org.BouncyCastle.Crypto.Signers;
+using Org.BouncyCastle.Crypto.Digests;
+// directive to use Entity Framework Core for database operations LINQ, AnyAsync and SaveChangesAsync
 using Microsoft.EntityFrameworkCore;
-
+//directive to use AppDbContext for database queries and updates
 using SecureVotingApp.Data;
+// directive to use the data models for the application
 using SecureVotingApp.Models;
+//engine for RSA encryption and decryption
+using Org.BouncyCastle.Crypto.Engines;
+
 using SecureVotingApp.Client.Contracts;
 using SecureVotingApp.Services;
+//provide authorization attributes
 using Microsoft.AspNetCore.Authorization;
+//directive to use rate limiting attributes
 using Microsoft.AspNetCore.RateLimiting;
 
 //namespace for grouping services components together
@@ -41,7 +44,7 @@ namespace SecureVotingApp.Controllers;
 [AllowAnonymous]
 [EnableRateLimiting("StrictPolicy")]
 //route for the votecontroller 
-[Route("api/votes")]
+[Route("api/vote")]
 
 //class for handling vote submission requests from the client
 public class VoteController : ControllerBase
@@ -50,6 +53,9 @@ public class VoteController : ControllerBase
     private readonly AppDbContext dbContext;
     //credential signer for signing blinded credentials
     private readonly CredentialSigner credentialSigner;
+
+    //symplify application, but allows for future extension
+    private const string defaultElectionId = "election-2026";
 
     //inject the dbcontext and credential signer  into the constructor as dependency injection
     public VoteController(AppDbContext dbContext, CredentialSigner credentialSigner)
@@ -67,8 +73,8 @@ public class VoteController : ControllerBase
         return Ok(new
         {
             //Modulus and Exponent are encoded in base64url format for safe transmission over HTTP
-            Modulus =Base64UrlEncoder(pubKey.Modulus.ToByteArrayUnsigned()),
-            // * FIXED: RsaKeyParameters exposes the exponent as Exponent.
+            Modulus = Base64UrlEncoder(pubKey.Modulus.ToByteArrayUnsigned()),
+            // RsaKeyParameters exposes the exponent as Exponent.
             Exponent = Base64UrlEncoder(pubKey.Exponent.ToByteArrayUnsigned())
         });
     }
@@ -76,26 +82,40 @@ public class VoteController : ControllerBase
     //handle post request to submit ballot
     [HttpPost]
     //FromBody attribute indicates the request body will be deserialized into the AnonymousVoteSubmit object
-    public async Task<IActionResult> SubmitVote([FromBody]AnonymousVoteSubmit request)
-    {  
+    public async Task<IActionResult> SubmitVote([FromBody] AnonymousVoteSubmit request)
+    {   //validate the request
+        if (request == null)
+        {
+            return BadRequest("Request body is required.");
+        }
         //validate the request model
-        if(string.IsNullOrWhiteSpace(request.AnonymousCredential) ||string.IsNullOrWhiteSpace(request.ElectionId))
+        if (string.IsNullOrWhiteSpace(request.AnonymousCredential) || string.IsNullOrWhiteSpace(request.VoteChoice)
+               || string.IsNullOrWhiteSpace(request.MessageRandomizer))
         {
-            return BadRequest("Invalid request data.");
+            return BadRequest("Invalid request data, missing.");
         }
         
-        //Author Aaron Byrne- Check that the voter has infact selected a voting option
-        if (string.IsNullOrWhiteSpace(request.VoteChoice))
+        //Author Aaron Byrne- Only allow a user to vote Yes or No as a vote
+        string voteChoice = request.VoteChoice.Trim();
+
+        if (!voteChoice.Equals("Yes", StringComparison.OrdinalIgnoreCase) &&
+            !voteChoice.Equals("No", StringComparison.OrdinalIgnoreCase))
         {
-            return BadRequest("Invalid vote choice, please select an option");
+            return BadRequest("Invalid voting choice. Your vote must be either Yes or No");
         }
         
+        //***safe guard to ensure electionId is not null or empty use  the defaultElectionId if it is
+        string electionId = string.IsNullOrWhiteSpace(request.ElectionId) ? defaultElectionId : request.ElectionId;
         //variable for signed credential bytes
         byte[] signatureBytes;
+        //delcare the randomized message preifx byte array
+        byte[] messageRandomizer;
         try
         {
             //decode the base64 url signature of the enconded credential
             signatureBytes = Base64UrlDecoder(request.AnonymousCredential);
+            //decode the RFC 9474 message randomizer
+            messageRandomizer = Base64UrlDecoder(request.MessageRandomizer);
 
         }
         catch
@@ -103,8 +123,8 @@ public class VoteController : ControllerBase
             return BadRequest("Invalid credential encoding.");
         }
 
-        //verify the signature of the blinded credential using the server public keu
-        if(!VerifyCredentialSignature(request.ElectionId, signatureBytes))
+        //verify the signature of the blinded credential using the server public key
+        if (!VerifyCredentialSignature(electionId, signatureBytes, messageRandomizer))
         {
             return Unauthorized("Invalid voting credential signature.");
         }
@@ -118,82 +138,133 @@ public class VoteController : ControllerBase
         // convert the hash to a base64 string for storage and comparison
         string credentialHash = Convert.ToBase64String(hashBytes);
 
-        //check if the hash of the blinded credential has already been spent
-        bool beenSpent = await dbContext.SpentCredentials.AnyAsync(sbc =>sbc.ElectionId ==request.ElectionId && sbc.CredentialHash == credentialHash);
-    
-        if (beenSpent)
-        {
-            return Conflict(new {message = "This voting credential has already been used."});
-        }
-    
-        //record the hash of the blinded credential as spent to prevent double voting
-        dbContext.SpentCredentials.Add(new SpentCredential
-        {
-            ElectionId = request.ElectionId,
-            CredentialHash = credentialHash,
-            SpentAt = DateTimeOffset.UtcNow
-        });
-        
-        //Author Aaron Byrne- When a valid vote has been submitted, create a new anon ballot and save it to the database
-        dbContext.AnonBallots.Add(new AnonBallot
-        {
-            VoteChoice = request.VoteChoice,
-            ElectionId = request.ElectionId,
-        });
-        
-        await dbContext.SaveChangesAsync();
 
-        return Ok(new VoteReceipt
+        //start a database transaction to ensure atomicity of the vote submission and credential spending
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        try
         {
-             ElectionId = request.ElectionId,
-             //generate a unique receipt id for the vote submission
-             ReceiptId = Guid.NewGuid().ToString(),
-             ConfirmationMessage = "Your vote has successfully been submitted."
-
-        });
-    }
-        
-        private bool VerifyCredentialSignature(string electionId, byte[]signatureBytes)
-        {
-            try
-            {   
-                RsaKeyParameters publicKey = credentialSigner.GetPublicKey();
-                // s is 
-                var s = new BigInteger(1, signatureBytes);
-
-                //reject signature integers out of RSA
-                if(s.CompareTo(BigInteger.One)<= 0 || s.CompareTo(publicKey.Modulus) >= 0)
-                {
-                    return false;
-                }
-                //RFC 9474 verification of RSA signature using public key and exponent
-                BigInteger m = s.ModPow(publicKey.Exponent, publicKey.Modulus);
-                //convert recoverd integer back to fixed octet array matching the RSA modulus length k
-                int k = (publicKey.Modulus.BitLength + 7 ) / 8;
-                byte [] recoveredBytes = m.ToByteArrayUnsigned();
-                byte [] fixedLenRecovered = new byte[k];
-                //left pad the recovered value with zeros if it is shorter than the modulus length
-                Buffer.BlockCopy(recoveredBytes, 0, fixedLenRecovered, k - recoveredBytes.Length, recoveredBytes.Length);
-                
-                return fixedLenRecovered.Length == k;
-
-
-            }
-            catch
+            //check if the hash of the blinded credential has already been spent
+            bool beenSpent = await dbContext.SpentCredentials.AnyAsync(sbc => sbc.ElectionId == electionId
+                                && sbc.CredentialHash == credentialHash);
+            if (beenSpent)
             {
-              return false;
+                await transaction.RollbackAsync();
+                return Conflict(new { message = "This voting credential has already been used." });
             }
+            //record the hash of the blinded credential as spent to prevent double voting
+            dbContext.SpentCredentials.Add(new SpentCredential
+            {
+                ElectionId = electionId,
+                CredentialHash = credentialHash,
+
+            });
+            //Author Aaron Byrne- When a valid vote has been submitted, create a new anon ballot and save it to the database
+            dbContext.AnonBallots.Add(new AnonBallot
+            {
+                VoteChoice = voteChoice.Equals("Yes", StringComparison.OrdinalIgnoreCase) ? "Yes" : "No",
+                ElectionId = electionId,
+            });
+            await dbContext.SaveChangesAsync();
+
+            //commit both records together
+            await transaction.CommitAsync();
+            return Ok(new VoteReceipt
+            {
+                ElectionId = electionId,
+                //generate a unique receipt id for the vote submission
+                ReceiptId = Guid.NewGuid().ToString(),
+                ConfirmationMessage = "Your vote has successfully been submitted."
+
+            });
+
+
         }
-        //decode the base64 url encoded blinded credential into a byte array
-        private static byte[] Base64UrlDecoder(string data)
+        catch (DbUpdateException)
         {
-            string padded = data.Replace('-','+').Replace('_','/');
-            padded += new string('=', (4 - padded.Length % 4) % 4);
-            return Convert.FromBase64String(padded);
+            //rollback both operations if there is a conflict
+            await transaction.RollbackAsync();
+
+            //detach failed entity to prevent it from being tracked and causing issues with future requests
+            foreach (var entry in dbContext.ChangeTracker.Entries().Where(e => e.State == EntityState.Added).ToList())
+            {
+                entry.State = EntityState.Detached;
+            }
+            return Conflict(new { message = "Database conflict. Credential is spent." });
         }
-        //encode bytes to base64 url for public key endpoint
-        private static string Base64UrlEncoder(byte[] data)
+
+    }
+
+    private bool VerifyCredentialSignature(string electionId, byte[] signatureBytes, byte[] messageRandomizer)
+    {
+        try
         {
-            return Convert.ToBase64String(data).Replace('+', '-').Replace('/','_').TrimEnd('=');
+            //retrieve the server RSA public key parameters(Modulus N and exponent e) from the credential signer
+            RsaKeyParameters publicKey = credentialSigner.GetPublicKey();
+            //convert recoverd integer back to fixed octet array matching the RSA modulus length k
+            int k = (publicKey.Modulus.BitLength + 7) / 8;
+            //check the signature length
+            if (signatureBytes.Length != k)
+            {
+                return false;
+            }
+            // converts the raw signature bytes into a positive BigInteger scalar s for modular arithmetic
+            var s = new BigInteger(1, signatureBytes);
+
+            //reject signature integers out of RSA
+            if (s.CompareTo(BigInteger.One) <= 0 || s.CompareTo(publicKey.Modulus) >= 0)
+            {
+                return false;
+            }
+
+
+            //check the randomized message prefix is 32 bytes
+            if (messageRandomizer == null || messageRandomizer.Length != 32)
+            {
+                return false;
+            }
+            //construct the blinded message from the client
+            string message = electionId;
+            //converts the electionId into UTF8 bytes
+            byte[] messageBytes = System.Text.Encoding.UTF8.GetBytes(message);
+            //create the prepared message 
+            byte[] preparedMessage = new byte[messageRandomizer.Length + messageBytes.Length];
+            //copy the randomized prefix into the prepared message
+            Buffer.BlockCopy(messageRandomizer, 0, preparedMessage, 0, messageRandomizer.Length);
+            //append the electionId to the randomized prefix 
+            Buffer.BlockCopy(messageBytes, 0, preparedMessage, messageRandomizer.Length, messageBytes.Length);
+
+            //create a PSS  signer using RSA blinding and sha384 digest, MGF1(mark generation function 1) byte mask obsucre prepared message and salt
+            var pssSigner = new PssSigner(new RsaEngine(), new Sha384Digest(), new Sha384Digest(), 48);
+            //initialize the PSS encoding and RSA blinding
+            pssSigner.Init(false, publicKey);
+            //supply the original prepared message
+            pssSigner.BlockUpdate(preparedMessage, 0, preparedMessage.Length);
+            //intialize the PSS signer with the public key for verification
+            return pssSigner.VerifySignature(signatureBytes);
         }
+        catch (CryptographicException)
+        {
+            return false;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+    }
+    //decode the base64 url encoded blinded credential into a byte array
+    private static byte[] Base64UrlDecoder(string data)
+    {
+        if (string.IsNullOrWhiteSpace(data))
+        {
+            throw new FormatException("Input data is null or empty.");
+        }
+        string padded = data.Replace('-', '+').Replace('_', '/');
+        padded += new string('=', (4 - padded.Length % 4) % 4);
+        return Convert.FromBase64String(padded);
+    }
+    //encode bytes to base64 url for public key endpoint
+    private static string Base64UrlEncoder(byte[] data)
+    {
+        return Convert.ToBase64String(data).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+    }
 }

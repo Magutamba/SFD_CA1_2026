@@ -57,6 +57,8 @@ builder.Services.AddCustomRateLimiter();
 builder.Services.AddCascadingAuthenticationState(); // Shared authentication state with client (Lorenzo)
 //@author Moïse create path for storing RSA private key
 string privateKeyPath = Path.Combine(builder.Environment.ContentRootPath,"Keys", "voting_signing_key.pem");
+//@author Moïse  generate RSA key pair and save to file if it does not exist
+RSAKeyGenerator.GenerateAndSaveKeyPair(privateKeyPath);
 //@author Moïse add singleton service for signing credentials with RSA private key, PEM file path included
 //might need to change the path
 builder.Services.AddSingleton<CredentialSigner>(_ => new CredentialSigner(privateKeyPath));

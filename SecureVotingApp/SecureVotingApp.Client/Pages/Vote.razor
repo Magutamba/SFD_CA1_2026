@@ -1,165 +1,263 @@
-@page "/vote/{ElectionId}"
 <!-- @author Moïse *-->
-
+<!--***-->
+@page "/vote"
+@*@page "vote/{electionId}"*@
+@attribute [Authorize]
+@* run the page in browser*@
+@rendermode @(new InteractiveWebAssemblyRenderMode(
+prerender: false))
+@inject HttpClient Http
+@inject NavigationManager Navigation
 <!--get the Contracts and Services*-->
 @using SecureVotingApp.Client.Contracts
 @using SecureVotingApp.Client.Services
-
+@using Microsoft.AspNetCore.Authorization;
+@*inject the VoterAPIClient to handle voter API endpoints for requesting credentials and ballots*@
 @inject VoterApiClient VoterApiClient
+
 
 <PageTitle>Vote</PageTitle>
 
+<div class="container my-4" style="max-width: 650px;">
+    <h2 class="mb-3">Secure Anonymous Voting</h2>
 
-<div class="container mt-4">
-        <p>
-            <strong>Election Id</strong> @ElectionId
-        </p>
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <strong>Error:</strong> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+        </div>
+    }
 
-        <!-- Display the election the voter is participating in -->
+    @if (session == null)
+    {
+        <!-- Initial Options: Request fresh ballot or Recover existing session -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Ballot Issuance & Recovery</h5>
+                <p class="card-text text-muted">
+                    Request a new voting credential or recover an existing credential using your recovery key.
+                </p>
 
-        <!--show the credential request button before session starts --->
-
-        @if(voteSession == null)
-        {
-            <!-- request credentials before allowing vote -->
-            <p>Request Credentials to vote</p>
-            <button class="btn btn-primary"
-                    @onclick="RequestCredentials"
-                    disabled="@isLoading">
-                    @(isLoading ? "Requesting credentials..." : "Request Credentials")
-            </button>
-        }
-        else if( receipt == null)
-        {
-            <hr />
-            <h3> Voting Credential Issued</h3>
-            <p> Your credential as been issued.</p>
-
-            <!-- display credential expiry time-->
-            <p>
-                <strong> Credential Expiry:</strong>@voteSession.CredentialExpiresAt.ToLocalTime().ToString("H:mm")
-            </p>
-
-            <h3> Cast your ballot</h3>
-
-            <div class="form-group">
-                <label for="voteChoice">Enter your choice:</label>
-                <input 
-                    id="voteChoice"
-                    type="text"
-                    @bind="voteChoice"
-                    placeholder="Enter yes, no, anything else will be considered as a spoiled ballot"
-                />
-
+                <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                    <button class="btn btn-primary me-md-2" @onclick="RequestBallot" disabled="@isLoading">
+                        @if (isLoading && !isRecoverMode)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            <span>Issuing Ballot...</span>
+                        }
+                        else
+                        {
+                            <span>Request New Ballot</span>
+                        }
+                    </button>
+                    <button class="btn btn-outline-secondary" @onclick="ToggleRecoveryMode" disabled="@isLoading">
+                        @(isRecoverMode ? "Cancel Recovery" : "Recover Existing Ballot")
+                    </button>
+                </div>
             </div>
+        </div>
 
-            <!-- submite anonymous credential and vote -->
-            <button class="btn btn-success"
-                    @onclick="SubmitVote" 
-                    disabled="@isLoading || string.IsNullOrEmpty(voteChoice)">
-                    @(isLoading ? "Submitting vote..." : "Submit Vote")
-            </button>
-
-        }
-
-        @if (IsCredentialExpired)
+        @if (isRecoverMode)
         {
-            <p class="text-danger">
-                Your voting credential has expired. Please request a new credential to vote.
-
-            <button class="btn btn-primary"
-                    @onclick="SubmitVote"
-                    disabled="@isLoading || string.isNullOrWhiteSpace(voteChoice) || IsCredentialExpired">
-                    @(isLoading ? "Submitting credentials..." : "Vote Submit")
-            </button>
-            </p>
-        }
-        <!-- display vote receipt for successful submission -->
-        @if (receipt !=null)
-        {
-            <hr />
-            <h3>Vote Submitted</h3>
-            <p>@receipt.ConfirmationMessage</p>
-
-            <p>
-                <strong>Receipt ID: </strong>@receipt.ReceiptId
-            </p>
-        }
-
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="alert alert-danger">
-                    @errorMessage
+            <!-- Recovery Input Form -->
+            <div class="card border-secondary shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">Recover Issued Ballot Session</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="recoveryKeyInput" class="form-label font-monospace">Enter Recovery Key</label>
+                        <textarea id="recoveryKeyInput" class="form-control font-monospace" rows="2" 
+                                  placeholder="Paste your 256-bit Base64Url recovery key here..." 
+                                  @bind="inputRecoveryKey"></textarea>
+                        <div class="form-text">
+                            Your recovery key decrypts your blinded credential locally in your browser. The key is never sent to the server.
+                        </div>
+                    </div>
+                    <button class="btn btn-success" @onclick="RecoverBallot" disabled="@(isLoading || string.IsNullOrWhiteSpace(inputRecoveryKey))">
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            <span>Decrypting Session...</span>
+                        }
+                        else
+                        {
+                            <span>Restore Ballot</span>
+                        }
+                    </button>
+                </div>
             </div>
-            
+        }
+    }
+    else if (receipt == null)
+    {
+        <!-- Active Vote Session & Recovery Key Display -->
+        @if (!string.IsNullOrEmpty(session.RecoveryKey))
+        {
+            <div class="card border-warning mb-4 shadow-sm">
+                <div class="card-header bg-warning text-dark fw-bold">
+                    Important: Save Your Recovery Key
+                </div>
+                <div class="card-body">
+                    <p class="card-text small text-muted">
+                        If your browser refreshes or session expires before submitting, use this key to recover your voting credential:
+                    </p>
+                    <div class="input-group mb-2">
+                        <input type="text" class="form-control font-monospace small" value="@session.RecoveryKey" readonly />
+                        <button class="btn btn-outline-secondary" @onclick="CopyRecoveryKey">
+                            @(keyCopied ? "Copied!" : "Copy Key")
+                        </button>
+                    </div>
+                </div>
+            </div>
         }
 
+        <!-- Vote Submission Form -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Cast Your Ballot</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="voteChoiceInput" class="form-label fw-bold">Enter Your Choice:</label>
+                    <input type="text" id="voteChoiceInput" class="form-control" 
+                           placeholder="Type your vote here..." 
+                           @bind="selectedChoice" @bind:event="oninput" />
+                </div>
+
+                <button class="btn btn-success w-100" @onclick="SubmitVote" disabled="@(isLoading || string.IsNullOrWhiteSpace(selectedChoice))">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        <span>Submitting Vote Anonymously...</span>
+                    }
+                    else
+                    {
+                        <span>Submit Ballot</span>
+                    }
+                </button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Vote Submitted Receipt -->
+        <div class="card border-success shadow-sm mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Vote Submitted Successfully</h5>
+            </div>
+            <div class="card-body">
+                <p>Your anonymous vote has been recorded</p>
+                @if (!string.IsNullOrEmpty(receipt.ReceiptId))
+                {
+                    <p class="font-monospace small"><strong>Receipt ID:</strong> @receipt.ReceiptId</p>
+                }
+                <button class="btn btn-primary" @onclick="ResetForm">Return to Start</button>
+            </div>
+        </div>
+    }
 </div>
 
-@code{
-    //election id obtained from the route parameter in url
-    [Parameter]
-    public string ElectionId {get;set;} = string.Empty;
-
-    //anonymous anonymous credential in memory
-    private VoteSession? voteSession;
-
-    //store the receipt returned from the server after submission
+@code {
+    private VoteSession? session;
     private VoteReceipt? receipt;
-    //store user vote
-    private string voteChoice = string.Empty;
-
-    //control loading state for async operations
-    private bool isLoading =false;
-
-    //store error message for display
+    
+    private string selectedChoice = string.Empty;
+    private string inputRecoveryKey = string.Empty;
     private string errorMessage = string.Empty;
+    
+    private bool isLoading = false;
+    private bool isRecoverMode = false;
+    private bool keyCopied = false;
 
-    //check whether anonymous credential as expired
-    private bool IsCredentialExpired => voteSession!=null && DateTimeOffset.UtcNow > voteSession.CredentialExpiresAt;
-
-    //request and receive anonymous signed voting credentials 
-    private async Task RequestCredentials()
+    private async Task RequestBallot()
     {
+        isLoading = true;
+        errorMessage = string.Empty;
+
         try
         {
-            isLoading = true;
-            errorMessage = string.Empty;
-
-            //call api client to request and unblind the credentials from the server
-            voteSession = await VoterApiClient.RequestBallotAsync(ElectionId);
+            session = await VoterApiClient.RequestBallotAsync();
         }
         catch (Exception ex)
         {
-            errorMessage =ex.Message;
-
-        }finally
+            errorMessage = ex.Message;
+        }
+        finally
         {
             isLoading = false;
         }
     }
 
-    //submit anonymous credential and vote to the server
-    private async Task SubmitVote()
+    private async Task RecoverBallot()
     {
-        //ensure  credential exist before submission
-        if(voteSession == null)
+        if (string.IsNullOrWhiteSpace(inputRecoveryKey))
             return;
+
+        isLoading = true;
+        errorMessage = string.Empty;
+
         try
         {
-            isLoading = true;
-            errorMessage = string.Empty;
-
-            //call api client to submit the vote
-            receipt = await VoterApiClient.SubmitVoteAsync(voteSession, voteChoice.Trim());
+            session = await VoterApiClient.RecoverBallotAsync("election-2026", inputRecoveryKey.Trim());
+            isRecoverMode = false;
         }
         catch (Exception ex)
         {
-            errorMessage =ex.Message;
-
-        }finally
+            errorMessage = $"Recovery failed: {ex.Message}";
+        }
+        finally
         {
             isLoading = false;
         }
+    }
+
+    private async Task SubmitVote()
+    {
+        if (session == null || string.IsNullOrWhiteSpace(selectedChoice))
+            return;
+
+        isLoading = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            receipt = await VoterApiClient.SubmitVoteAsync(session, selectedChoice.Trim());
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ToggleRecoveryMode()
+    {
+        isRecoverMode = !isRecoverMode;
+        inputRecoveryKey = string.Empty;
+        errorMessage = string.Empty;
+    }
+
+    private void CopyRecoveryKey()
+    {
+        if (session != null && !string.IsNullOrEmpty(session.RecoveryKey))
+        {
+            keyCopied = true;
+        }
+    }
+
+    private void ResetForm()
+    {
+        session = null;
+        receipt = null;
+        selectedChoice = string.Empty;
+        inputRecoveryKey = string.Empty;
+        errorMessage = string.Empty;
+        isRecoverMode = false;
+        keyCopied = false;
     }
 }

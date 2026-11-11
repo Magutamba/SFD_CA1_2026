@@ -14,6 +14,10 @@ public class BlindCredentialRequest
 //kept in browser memory only, never sent to the server
 public class BlindState
 {
+    //store 32 byte randomized prepared message prefix required by RFC 9474
+    public string MessageRandomizer {get;set;} = string.Empty;
     //temporary secret value required to unblind the signed blinded credential
     public string BlindingValue {get;set;} = string.Empty;
+    //electionId to track
+    public string ElectionId {get;set;} = string.Empty;
 }

@@ -13,5 +13,4 @@ public class SpentCredential
     //hash of the anonymous credential
     public string CredentialHash {get;set;} = string.Empty;
 
-    public DateTimeOffset SpentAt {get;set;}
 }

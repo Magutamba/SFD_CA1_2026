@@ -15,11 +15,13 @@ public class VoteSession
     //anonymous signed blindend credential issued by server after checking voter is logged in and hasn't voted
     [Required]
     public string AnonymousCredential {get;set;} =string.Empty;
+    //RFC 9474 randomized prepared message prefix for credential verification
+    [Required]
+    public string MessageRandomizer {get;set;} = string.Empty;
+    //recovery key to restore the blinding state in case of browser crash or refresh
+    public string RecoveryKey {get;set;} = string.Empty;
     //vote cast by the voter
     [Required]
     // * FIXED: initialize the value to satisfy nullable analysis.
     public string VoteChoice {get;set;} = string.Empty;
-
-    //the signed credential expires at this time
-    public DateTimeOffset CredentialExpiresAt {get;set;}
 }

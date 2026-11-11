@@ -4,21 +4,25 @@ using System.ComponentModel.DataAnnotations;
 //logical namespace to group components contracts together prevents class name collisions
 namespace SecureVotingApp.Client.Contracts;
 
-//sent when logged in as credentials annd is eligible casts their vote 
+//sent when logged in as credentials and is eligible casts their vote 
+//carries anonymous credendial and submission information
 public class AnonymousVoteSubmit
 {
-    
-    [Required] 
+
+    [Required]
     //identify the election the voter is voting in
-     public string ElectionId {get; set;} = string.Empty;
-     
-    [Required] 
+    public string ElectionId { get; set; } = string.Empty;
+
+    [Required]
     //anonymous signed credential issued after
     // authorises the voter to cast their vote without exposing their identity 
-    public string AnonymousCredential {get;set;} = string.Empty;
+    public string AnonymousCredential { get; set; } = string.Empty;
+    //RFC 9474 randomized prepared message prefix for credential verification
+    [Required]
+    public string MessageRandomizer { get; set; } = string.Empty;
 
     //the vote cast by the voter
     [Required]
-    public string VoteChoice {get;set;} = string.Empty;
+    public string VoteChoice { get; set; } = string.Empty;
 
 }

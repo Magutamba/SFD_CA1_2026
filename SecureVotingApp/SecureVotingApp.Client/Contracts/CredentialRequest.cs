@@ -5,16 +5,14 @@ using System.ComponentModel.DataAnnotations;
 namespace SecureVotingApp.Client.Contracts;
 //contract for requesting ballot and credentials from server in order to vote
 public class CredentialRequest
-{  [Required] 
+{
+    [Required]
     //identify the election the voter is voting in
-     public string ElectionId {get; set;} = string.Empty;
+    public string ElectionId { get; set; } = string.Empty;
 
     //created then blinded in client before sending to server prevents server from knowing voter id
-    [Required] public string BlindedCredential {get;set;} = string.Empty;
-    
-    // [Required] 
-    // //anonymous signed credential issued after
-    // // authorises the voter to cast their vote without exposing their identity 
-    // public string AnonymousCredential {get;set;} = string.Empty;
+    public string BlindedCredential { get; set; } = string.Empty;
+    //recovery package, encrypte blind state
+    public string RecoveryPackage { get; set; } = string.Empty;
 
 }
