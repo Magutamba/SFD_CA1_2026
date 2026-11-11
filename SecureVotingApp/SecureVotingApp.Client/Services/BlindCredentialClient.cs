@@ -269,7 +269,7 @@ public class BlindCredentialClient : IBlindCredentialClient
     }
 
     //method to generate random recovery key and encrypt blind state
-    public RecoveryMaterial CreateRecoveryMaterial(BlindState state)
+    public RecoveryMaterial CreateRecoveryMaterial(BlindState state, string electionId)
     {
         if(state == null)
         {
@@ -277,16 +277,18 @@ public class BlindCredentialClient : IBlindCredentialClient
         }
         //generate a random 32 byte recovery key for encrypting the blind state
         byte[] recoveryKey = RandomNumberGenerator.GetBytes(32);
-        //encrypt the blind state using AES-GCM with the recovery key
+        //convert the blind state into UTF8 bytes
         byte[] plainText = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(state);
-
+        //convert the electionId into UTF8 bytes as additional authenticated data
+        byte[] associatedData = JsonSerializer.SerializeToUtf8Bytes(electionId);
         //generate a random 12 byte nonce for AES-GCM encryption
         byte [] nonce = RandomNumberGenerator.GetBytes(12);
 
         // use AES-256-GCM to encrypt the blind state with the recovery key and nonce, producing ciphertext and authentication tag
         var cipher = new GcmBlockCipher(new AesEngine());
         //intialize the cipher for encryption with the recovery key and nonce, specifying the authentication tag length of 128 bits
-        cipher.Init(true, new AeadParameters(new KeyParameter(recoveryKey), 128, nonce));
+        //associatedData included when initializing cipher to ensure the recovery package is bound to the specific electionId
+        cipher.Init(true, new AeadParameters(new KeyParameter(recoveryKey), 128, nonce, associatedData));
         //byte array to hold the cipher text and authentication tag
         byte[] output = new byte[cipher.GetOutputSize(plainText.Length)];
         //encrypt the blind state and write the result to the output buffer, return number of bytes written
@@ -310,7 +312,7 @@ public class BlindCredentialClient : IBlindCredentialClient
 
     }
     // method to decrypt the encrypted package
-    public BlindState RestoreRecoveryPackage( string recoveryPackage, string recoveryKey)
+    public BlindState RestoreRecoveryPackage( string recoveryPackage, string recoveryKey, string electionId)
     {
         // decode the base64 url encoded recovery key and package into raw byte arrays
         byte[] key = Base64UrlDecode(recoveryKey);
@@ -327,8 +329,10 @@ public class BlindCredentialClient : IBlindCredentialClient
         byte[] cipherTextWithTag = package[12..];
         //use AES-256-GCM to decrypt the blind state with the recovery key and nonce producing plaintext
         var cipher = new GcmBlockCipher(new AesEngine());
+        //convert the electionId into UTF8 bytes as additional authenticated data
+        byte[] associatedData = JsonSerializer.SerializeToUtf8Bytes(electionId);
         //initialize the cipher for decryption with the recovery key and nonce, specifying the authentication tag length of 128 bits
-        cipher.Init(false, new AeadParameters(new KeyParameter(key), 128, nonce));
+        cipher.Init(false, new AeadParameters(new KeyParameter(key), 128, nonce, associatedData));
         //a byte array holds the decrypt plaintext
         byte[] plainText = new byte[cipher.GetOutputSize(cipherTextWithTag.Length)];
         //decrypt the blind state and write the result to the output buffer, return number of bytes written

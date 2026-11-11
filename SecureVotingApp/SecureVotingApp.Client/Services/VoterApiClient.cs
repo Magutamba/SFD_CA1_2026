@@ -45,7 +45,7 @@ public class VoterApiClient
 
         //generate recovery material and encrypted package locally
         var client = (BlindCredentialClient)blindVoterClient;
-        RecoveryMaterial recoveryMaterial = client.CreateRecoveryMaterial(blindRequest.State);
+        RecoveryMaterial recoveryMaterial = client.CreateRecoveryMaterial(blindRequest.State, currentElectionId);
 
 
         //send the blinded credential to the server and request a signed credential and ballot
@@ -200,7 +200,7 @@ public class VoterApiClient
         //decryption happens exclusively in the client
         var client = (BlindCredentialClient)blindVoterClient;
         //restore the blinding state
-        BlindState restoredState = client.RestoreRecoveryPackage(result.RecoveryPackage,recoveryKey);
+        BlindState restoredState = client.RestoreRecoveryPackage(result.RecoveryPackage,recoveryKey, currentElectionId);
         //remove the blinding from the signed credential
         string anonymousCredential = await blindVoterClient.UnblindCredentialAsync(
             // pass the signed ballot creddential and blinding state to unblind method and get signed credential for anonimity whilst voting
