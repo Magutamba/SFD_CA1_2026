@@ -135,9 +135,21 @@ public class VoterApiClient
             }
 
         );
-
+        
         //send the request to the server and wait for the response containin vote receipt
         using HttpResponseMessage response = await httpClient.SendAsync(request);
+        if(response.StatusCode == System.Net.HttpStatusCode.Conflict)
+        {
+           throw new InvalidOperationException("This voting credential  has already been used to vote, you cannot.");
+        }
+        if(response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            throw new InvalidOperationException(" You are not authorized to submit a vote");
+        }
+        if(response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+        {
+             throw new InvalidOperationException(" Invalid vote submission, missing recovery material");
+        }
         //ensure the response indicates success
         response.EnsureSuccessStatusCode();
 

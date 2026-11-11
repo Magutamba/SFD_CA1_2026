@@ -40,11 +40,11 @@ prerender: false))
         <div class="card mb-4">
             <div class="card-header">
                 <h3 class="card-title"> Ballot Issuance & Recovery</h3>
-            </div class="card-body">
-            <p class="card-text">
-                Request a new voting credential or recover an existing credential using your recovery key.
-            </p>
-            <div>
+            </div>
+            <div class="card-body mb-4">
+                <p class="card-text">
+                    Request a new voting credential or recover an existing credential using your recovery key.
+                </p>
                 <button class="btn btn-primary" @onclick="RequestBallot" disabled="@isLoading">
                     @if (isLoading && !isRecoverMode)
                     {
@@ -58,74 +58,95 @@ prerender: false))
                 </button>
                 @*Toggle recovery mode*@
                 <button class="btn btn-primary" @onclick="ToggleRecoveryMode" disabled="@isLoading">
-                    @isRecoverMode ? "Cancel Recovery" : "Recover Existing Ballot"
+                    @(isRecoverMode ? "Cancel Recovery" : "Recover Existing Ballot")
                 </button>
             </div>
         </div>
-    }
-    @if (isRecoverMode)
-    {
-        @*Recovery Input Form*@
-        <div class="card mb-4">
-            
-            <div class="card-header mb-4">
-                <h3>Recover Issued Ballot Session</h3>
-        </div>
-    </div>
-    <div class="card-body ">
-            <label for="recoveryKeyInput class=" form-label>Enter Recovery Key</label>
-            <textarea id="recoveryKeyInpyt" class="form-label rows=" 3" placeholder=" Paste your recovery key..."
-                    @bind="inputRecoveryKey">
-                        </textarea>
-            <div class=form-text mb-3">
-                Your recovery key allows you to vote even if reload web browser or connection drops. Cannot vote twice.
-            </div>
+        
+        @if (isRecoverMode)
+        {
+            @*Recovery Input Form*@
+            <div class="card mb-4">
+                    
+                <div class="card-header mb-4">
+                    <h3>Recover Issued Ballot Session</h3>
+                </div>
 
-        </div>
-            @*Recover Existing Ballot*@
-            <button class=btn btn-success" @onclick="RecoverBallot"
-                    disabled="@(isLoading || string.IsNullOrWhiteSpace(inputRecoveryKey))">
-                @if (isLoading)
-                {
-                    <span class="spinner-border spinner-border-sm"> </span>
-                    <span>Decrypting session</span>
-                }
-                else
-                {
-                    <span>Restore Ballot</span>
-                }
-            </button>
-    </div>
-</div>
+                <div class="card-body ">
+                    <label for="recoveryKeyInput" class="form-label">Enter Recovery Key</label>
+                    <textarea id="recoveryKeyInput" class="form-control" rows="3" placeholder=" Paste your recovery key..."
+                              @bind="inputRecoveryKey">
+                        </textarea>
+                    <div class="form-text mb-3">
+                        Your recovery key allows you to vote even if reload web browser or connection drops. Cannot vote twice.
+                    </div>
+
+                    @*Recover Existing Ballot*@
+                    <button class="btn btn-success" @onclick="RecoverBallot"
+                            disabled="@(isLoading || string.IsNullOrWhiteSpace(inputRecoveryKey))">
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm"> </span>
+                            <span>Decrypting session</span>
+                        }
+                        else
+                        {
+                            <span>Restore Ballot</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        }
     }
-}
-else if (receipt==null)
-{
-@*Active Vote session & Recovery key Display*@
-    @if (!string.IsNullOrEmpty(session.RecoveryKey))
-{
-    <div class="card mb-4">
-        <div class="card-header">
-            Recovery Key automatically downloaded on your system
-            <div>
-                <div>
-                    <p>
-                        If your broswer refreshes or you must login from another device, use the recovery key
-                    </p>
-                    <div class="input-group mb2">
-                        <input type="text" class="form-control" value="@session.RecoveryKey" readonly />
-                        
+    else if (session != null && receipt == null)
+    {
+        @*Active Vote session & Recovery key Display*@
+        @if (!string.IsNullOrEmpty(session.RecoveryKey))
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    Recovery Key automatically downloaded on your system
+                    <div>
+                        <div>
+                            <p>
+                                If your broswer refreshes or you must login in from another device, use the recovery key
+                            </p>
+                            <div class="input-group mb2">
+                                <input type="text" class="form-control" value="@session.RecoveryKey" readonly />
+                                    
+                            </div>
+                            <a class="btn btn-primary w-100" 
+                              href="@GetDownloadDataUrl(session.ElectionId, session.RecoveryKey)"
+                               download="voting_recovery_key@(session.ElectionId).txt">
+                               <i class="bi bi-download me-2"></i>Download Recovery Key
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
-            }
-            @*Vote Submission Form*@
+        }
+        @*Vote Submission Form*@
+        <div class="card mb-4 ">
+            <div class="card-header bg-primary text-white shadow-sm mb-4">
                 <h5>Cast your Ballot</h5>
-                <button class="btn btn-success" @onclick="SubmitVote"
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="voteChoiceInput" class="form-label fw-bold">Enter Your Choice:</label>
+                    <select @bind="voteChoice" @bind:event="oninput" placeholder="our vote here...">
+                        <option value="Yes" id="voteChoiceSelect" class="form-control">Yes
+
+                        </option>
+                        <option value="No" id="voteChoiceSelect" class="form-control">No
+
+                        </option>
+                    </select>
+                </div>
+                <button class="btn btn-success w-100" @onclick="SubmitVote"
                         disabled="@(isLoading || string.IsNullOrWhiteSpace(voteChoice))">
                     @if (isLoading)
                     {
-                        <span class="spinner-border spinner-border-sm" ></span>
+                        <span class="spinner-border spinner-border--sm me-1" role="status"></span>
                         <span>Submitting vote anonymously...</span>
                     }
                     else
@@ -135,44 +156,10 @@ else if (receipt==null)
                 </button>
             </div>
         </div>
-        }
-
-        <!-- Vote Submission Form -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">Cast Your Ballot</h5>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <label for="voteChoiceInput" class="form-label fw-bold">Enter Your Choice:</label>
-                    <select>
-                        <option value="Yes" id="voteChoiceSelect" class="form-control" placeholder="Type your vote here..."
-                                @bind="selectedChoice" @bind:event="oninput">Yes
-
-                        </option>
-                        <option value="No" id="voteChoiceSelect" class="form-control" @bind="selectedChoice"
-                                @bind:event="oninput">No
-
-                        </option>
-                    </select>
-                </div>
-
-                <button class="btn btn-success w-100" @onclick="SubmitVote"
-                        disabled="@(isLoading || string.IsNullOrWhiteSpace(voteChoice))">
-                    @if (isLoading)
-                    {
-                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-                        <span>Submitting Vote Anonymously...</span>
-                    }
-                    else
-                    {
-                        <span>Submit Ballot</span>
-                    }
-                </button>
-            </div>
-        </div>
-        }
-        @if(receipt != null){
+    }
+    
+    @if (receipt != null)
+    {
         <!-- Vote Submitted Receipt -->
         <div class="card border-success mb-4">
             <div class="card-header ">
@@ -187,8 +174,11 @@ else if (receipt==null)
                 <button class="btn btn-primary" @onclick="ResetForm">Return to start</button>
             </div>
         </div>
-        }
-    </div>
+    }
+        
+    
+</div>
+
 
 @code {
     //state variables for the voting session and receipt
@@ -297,5 +287,15 @@ else if (receipt==null)
         inputRecoveryKey = string.Empty;
         errorMessage = string.Empty;
         isRecoverMode = false;
+    }
+    //method to generate a downloadable data URL for the recovery key file
+    private string GetDownloadDataUrl(string electionId,string key)
+    {
+        //create text content
+        string fileText = $"ElectionId: {electionId}"+ $"\nRecoveryKey:{key}";
+        //convert file to text to base 64 string for data URI
+        string base64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(fileText));
+        return $"data:application/octet-stream;base64,{base64}";
+        
     }
 }
