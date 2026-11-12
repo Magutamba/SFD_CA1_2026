@@ -1,0 +1,307 @@
+<!-- @author Moïse *-->
+<!--***-->
+@page "/vote"
+@*@page "vote/{electionId}"*@
+@attribute [Authorize]
+@* run the page in browser*@
+@rendermode @(new InteractiveWebAssemblyRenderMode(
+prerender: false))
+@inject HttpClient Http
+@inject NavigationManager Navigation
+<!--get the Contracts and Services*-->
+@using SecureVotingApp.Client.Contracts
+@using SecureVotingApp.Client.Services
+@using Microsoft.AspNetCore.Authorization;
+@*inject the VoterAPIClient to handle voter API endpoints for requesting credentials and ballots*@
+@inject VoterApiClient VoterApiClient
+
+
+<PageTitle>Vote</PageTitle>
+
+<div class="container mb-4" style="max-width: 650px;">
+    <div class="text-center mb-4">
+
+        <h2>Vote Anonymously</h2>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">
+            <strong>Error:</strong>@errorMessage
+            <button type="button" class="btn-close float-end" @onclick="() => errorMessage = string.Empty">
+
+            </button>
+        </div>
+    }
+    @*Session is empty*@
+    @if (session == null && receipt == null)
+    {
+        @*Request fresh ballot or recover existing session*@
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title"> Ballot Issuance & Recovery</h3>
+            </div>
+            <div class="card-body mb-4">
+                <p class="card-text">
+                    Request a new voting credential or recover an existing credential using your recovery key.
+                </p>
+                <button class="btn btn-primary" @onclick="RequestBallot" disabled="@isLoading">
+                    @if (isLoading && !isRecoverMode)
+                    {
+                        <span class="spinner-border spinner-border-sm"></span>
+                        <span>Issuing Ballot...</span>
+                    }
+                    else
+                    {
+                        <span>Request New Ballot</span>
+                    }
+                </button>
+                @*Toggle recovery mode*@
+                <button class="btn btn-primary" @onclick="ToggleRecoveryMode" disabled="@isLoading">
+                    @(isRecoverMode ? "Cancel Recovery" : "Recover Existing Ballot")
+                </button>
+            </div>
+        </div>
+        
+        @if (isRecoverMode)
+        {
+            @*Recovery Input Form*@
+            <div class="card mb-4">
+                    
+                <div class="card-header mb-4">
+                    <h3>Recover Issued Ballot Session</h3>
+                </div>
+
+                <div class="card-body ">
+                    <label for="recoveryKeyInput" class="form-label">Enter Recovery Key</label>
+                    <textarea id="recoveryKeyInput" class="form-control" rows="3" placeholder=" Paste your recovery key..."
+                              @bind="inputRecoveryKey">
+                        </textarea>
+                    <div class="form-text mb-3">
+                        Your recovery key allows you to vote even if reload web browser or connection drops. Cannot vote twice.
+                    </div>
+
+                    @*Recover Existing Ballot*@
+                    <button class="btn btn-success" @onclick="RecoverBallot"
+                            disabled="@(isLoading || string.IsNullOrWhiteSpace(inputRecoveryKey))">
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm"> </span>
+                            <span>Decrypting session</span>
+                        }
+                        else
+                        {
+                            <span>Restore Ballot</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        }
+    }
+    else if (session != null && receipt == null)
+    {
+        @*Active Vote session & Recovery key Display*@
+        @if (!string.IsNullOrEmpty(session.RecoveryKey))
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    Recovery Key automatically downloaded on your system
+                    <div>
+                        <div>
+                            <p>
+                                If your broswer refreshes or you must login in from another device, use the recovery key
+                            </p>
+                            <div class="input-group mb2">
+                                <input type="text" class="form-control" value="@session.RecoveryKey" readonly />
+                                    
+                            </div>
+                            <a class="btn btn-primary w-100" 
+                              href="@GetDownloadDataUrl(session.ElectionId, session.RecoveryKey)"
+                               download="voting_recovery_key@(session.ElectionId).txt">
+                               <i class="bi bi-download me-2"></i>Download Recovery Key
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        @*Vote Submission Form*@
+        <div class="card mb-4 ">
+            <div class="card-header bg-primary text-white shadow-sm mb-4">
+                <h5>Cast your Ballot</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="voteChoiceInput" class="form-label fw-bold">Enter Your Choice:</label>
+                    <select @bind="voteChoice" @bind:event="oninput" placeholder="our vote here...">
+                        <option value="Yes" id="voteChoiceSelect" class="form-control">Yes
+
+                        </option>
+                        <option value="No" id="voteChoiceSelect" class="form-control">No
+
+                        </option>
+                    </select>
+                </div>
+                <button class="btn btn-success w-100" @onclick="SubmitVote"
+                        disabled="@(isLoading || string.IsNullOrWhiteSpace(voteChoice))">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border--sm me-1" role="status"></span>
+                        <span>Submitting vote anonymously...</span>
+                    }
+                    else
+                    {
+                        <span>Submit Ballot</span>
+                    }
+                </button>
+            </div>
+        </div>
+    }
+    
+    @if (receipt != null)
+    {
+        <!-- Vote Submitted Receipt -->
+        <div class="card border-success mb-4">
+            <div class="card-header ">
+                <h3>Vote Submitted Successfully</h3>
+            </div>
+            <div class="card-body">
+                <p>Your anonymous vote as been cast</p>
+                @if (!string.IsNullOrEmpty(receipt.ReceiptId))
+                {
+                    <p><strong>Receipt ID:</strong>@receipt.ReceiptId</p>
+                }
+                <button class="btn btn-primary" @onclick="ResetForm">Return to start</button>
+            </div>
+        </div>
+    }
+        
+    
+</div>
+
+
+@code {
+    //state variables for the voting session and receipt
+    private VoteSession? session = null;
+    private VoteReceipt? receipt = null;
+
+    //variable for the user's selected vote choice
+    private string voteChoice = string.Empty;
+    //variable for the user's entered recovery key
+    private string inputRecoveryKey = string.Empty;
+    //variable for error message display
+    private string errorMessage = string.Empty;
+    //controls the loading state
+    private bool isLoading = false;
+    //varaiable controls the recovery mode
+    private bool isRecoverMode = false;
+
+    //method to request a ballot to the Voter API and handle the response
+    private async Task RequestBallot()
+    {
+        //reset the loading state and error message
+        isLoading = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            // request a new ballot ssession from the Voter API
+            session = await VoterApiClient.RequestBallotAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        //reset the loading state regardless of success or failure
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    //method to submit the user's vote choice to the Voter API and handle the response
+    private async Task SubmitVote()
+    {
+        // validate session and voteChoice isn't null
+        if (session == null || string.IsNullOrWhiteSpace(voteChoice))
+        {
+            return;
+        }
+        //validate vote 
+        if(string.IsNullOrWhiteSpace(voteChoice)|| (voteChoice != "Yes" && voteChoice != "No"))
+        {
+            errorMessage = "Invalid vote choice. Please select 'Yes' or 'No'." ;
+            return;
+        }
+        //reset loading state and error message
+        isLoading = true;
+        errorMessage = string.Empty;
+        try
+        {
+            receipt = await VoterApiClient.SubmitVoteAsync(session, voteChoice.Trim());
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        //reset the loading state regardless of success or failure
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    //method to recover a ballot session using the user's recovery key
+    private async Task RecoverBallot()
+    {
+        // validate the user's entered Recovery Key
+        if (string.IsNullOrWhiteSpace(inputRecoveryKey))
+        {
+            return;
+        }
+        //reset loading state and error message
+        isLoading = true;
+        errorMessage = string.Empty;
+        try
+        {
+            //request to recover the existing credential and ballot session from the Voter API using the recovery key
+            session = await VoterApiClient.RecoverBallotAsync("election-2026", inputRecoveryKey.Trim());
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        //reset the loading state regardless of success or failure
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    //toggle the recovery mode state and reset the input fields
+    private void ToggleRecoveryMode()
+    {
+        isRecoverMode = !isRecoverMode;
+        inputRecoveryKey = string.Empty;
+        errorMessage = string.Empty;
+    }
+
+    //reset the form state variables to inital state
+    public void ResetForm()
+    {
+        session = null;
+        receipt = null;
+        voteChoice = string.Empty;
+        inputRecoveryKey = string.Empty;
+        errorMessage = string.Empty;
+        isRecoverMode = false;
+    }
+    //method to generate a downloadable data URL for the recovery key file
+    private string GetDownloadDataUrl(string electionId,string key)
+    {
+        //create text content
+        string fileText = $"ElectionId: {electionId}"+ $"\nRecoveryKey:{key}";
+        //convert file to text to base 64 string for data URI
+        string base64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(fileText));
+        return $"data:application/octet-stream;base64,{base64}";
+        
+    }
+}

@@ -15,6 +15,9 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
+using OtpNet;
+using Microsoft.EntityFrameworkCore.Query;
+using Microsoft.AspNetCore.RateLimiting;
 
 
 namespace SecureVotingApp.Controllers;
@@ -26,6 +29,7 @@ public class AuthController : ControllerBase
     
     private readonly BcryptService _bcryptService;
     private readonly AppDbContext _dbContext;
+    private readonly ILogger<AuthController> _logger; //Author Aaron Byrne-Logger for recording authentication events such as registering, log-in etc.
     //for 2FA
     private readonly TotpService _totpService;
     private readonly PendingRegistrationService _pendingRegistrationService;
@@ -36,6 +40,11 @@ public class AuthController : ControllerBase
     {
         this._bcryptService = bcryptService;
         this._dbContext = dbContext;
+    public AuthController(BcryptService bcryptService, AppDbContext dbContext, ILogger<AuthController> logger, TotpService totpService, PendingRegistrationService pendingRegistrationService)
+    {
+        this._bcryptService = bcryptService;
+        this._dbContext = dbContext;
+        this._logger = logger; //Author Aaron Byrne-Stores logger passed in constructor for use in this controller
         this._totpService = totpService;
         this._pendingRegistrationService = pendingRegistrationService;
     }
@@ -92,7 +101,7 @@ public class AuthController : ControllerBase
 
         if (emailExists)
         {
-            return  Conflict(new { message = "Email already exists"});
+            return  Conflict("Email already exists");
         }
 
         // hash the Argon2id derived credential using bcrypt 
@@ -217,7 +226,16 @@ public class AuthController : ControllerBase
 
         //check db if user exist, using email to verify, if true return the user object 
         User? user = await _dbContext.Users.FirstOrDefaultAsync(user => user.Email == normalisedEmailLogin);
-        if(user is null) return Unauthorized("Invalid credentials");
+        if(user is null)
+        {
+            //Author Aaron Byrne-Logging a failed login when the inputted credentials are invalid
+            _logger.LogWarning(
+                "{EventType} occured because {Reason}",
+                "Login has failed",
+                "Invalid Credentials"
+            );
+            return Unauthorized("Invalid credentials");
+        }
         
         //check that the password is not null or empty
         bool isValidArgon2Hash = !string.IsNullOrWhiteSpace(request.Argon2Hash);
@@ -301,7 +319,14 @@ public class AuthController : ControllerBase
             claimPrincipal
         );
 
-
+        //Author Aaron Byrne-Logging a successful login after user has signed in
+        _logger.LogInformation(
+            "User {UserId} {EventType}",
+            user.Id,
+            "Login has succeeded"
+            
+        );
+        
         return Ok();
     }
 

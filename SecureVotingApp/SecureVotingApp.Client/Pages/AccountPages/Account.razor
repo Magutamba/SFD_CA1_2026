@@ -1,0 +1,55 @@
+@page "/account"
+
+@using System.Net
+@using Microsoft.AspNetCore.Components.Authorization
+
+@rendermode @(new InteractiveWebAssemblyRenderMode(
+                prerender: false))
+@inject HttpClient Http
+@inject NavigationManager Navigation
+<h3>Account</h3>
+@* 
+    This page displays the information based on if the user is authenticated on the server or not
+    Access to the vote page is governed by authentication and authorization policies that return Not Found if unauthenticated user attempts to access the page
+    If the user is not authenticated by the system, the user is prompted to register or login to access their account and cast their ballot
+*@
+<AuthorizeView>
+    <Authorized>
+        <p>Logged into system. Please click the following button to cast your ballot.</p>
+
+        <a class="btn btn-primary" href="vote">Cast Your Ballot</a>
+        <br/>
+        <button type="submit" @onclick="@Logout">Logout</button>
+        <p role="alert">@_message</p>
+    </Authorized>
+    <NotAuthorized>
+        <p>Welcome to the Account Page</p>
+        <p>Please register or login to access your account and cast your ballot.</p>
+        <a class="btn btn-primary" href="register">Register New Account</a>
+        
+        <a class="btn btn-primary" href="login">Login Existing Account</a>
+    </NotAuthorized>
+</AuthorizeView>
+    
+@code {
+    private string? _message = null;
+    private async void Logout()
+    {
+        using var response = await Http.PostAsync(
+            "api/auth/logout",
+            content: null);
+
+        if (response.IsSuccessStatusCode)
+        {
+            Navigation.NavigateTo("/", forceLoad: true);
+        }
+        else if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            _message = "Too many requests. Please try again later";
+        }
+        else
+        {
+            _message = "Error logging out. Please try again later";
+        }
+    }
+}

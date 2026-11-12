@@ -1,3 +1,4 @@
+@* @author Lorenzo *@
 @page "/login"
 @rendermode @(new InteractiveWebAssemblyRenderMode(
                 prerender: false))
@@ -10,13 +11,16 @@
 
 <h3>Login Account</h3>
 
+@*Edit Form used to bind LoginRequest model to form details. Check LoginRequest for property specific data annotations*@
 <EditForm Model="_request" FormName="AccountLogin" OnValidSubmit="LoginAsync">
     <label>Email</label><br/>
     <InputText @bind-Value="_request.Email"/><br/>
     
     <label>Password</label><br/>
     <InputText type="password" @bind-Value="_request.Password"/><br/>
-    <button type="submit" disabled="@_isSubmitting">Login</button>
+    <label>2FA Code</label><br/>
+    <InputText @bind-Value="_request.Code" minlength="6" maxlength="6"/><br/><br/>
+    <button class="btn btn-primary" type="submit" disabled="@_isSubmitting">Login</button>
     
     <DataAnnotationsValidator/>
     <ValidationSummary/>
@@ -24,7 +28,7 @@
 
 @if (_message is not null)
 {
-    <p role="status">@_message</p>
+    <p role="alert">@_message</p>
 }
 
 
@@ -57,6 +61,7 @@
             MemorySize = 19456,
             Iterations = 1
         };
+        // Retrieve hashed password given saved salt and convert to string for request payload
         var hash = await argon2.GetBytesAsync(32);
         var argon2Hash  = Convert.ToBase64String(hash);
         
@@ -64,9 +69,11 @@
         var userPayload = new UserLogin()
         {
             Email = _request.Email,
-            Argon2Hash = argon2Hash
+            Argon2Hash = argon2Hash,
+            Code = _request.Code
         };
         
+        // Login API call
         using var response = await Http.PostAsJsonAsync(
             "api/auth/login",
             userPayload);
@@ -79,9 +86,13 @@
         {
             _message = "Too many requests. Please try again later";
         }
+        else if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized)
+        {
+            _message = await response.Content.ReadAsStringAsync();
+        }
         else
         {
-            _message = "Invalid credentials. Please try again";
+            _message = "Service Error: Please try again later.";
         }
         
         _isSubmitting = false;
@@ -110,7 +121,6 @@
             _message = $"Error retrieving details: {await saltResponse.Content.ReadAsStringAsync()}. ";
             return "";
         }
-        
         
         var saltResult = await saltResponse.Content.ReadFromJsonAsync<SaltResponse>();
 
