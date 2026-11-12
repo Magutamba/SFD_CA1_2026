@@ -49,7 +49,7 @@ public class AppDbContext : DbContext
         // @author Aaron Byrne
         // Configuring the AnonBallot storage for the database
         modelBuilder.Entity<AnonBallot>()
-            .HasKey(ballot => ballot.Id);//Sets the ballot ID as the primary key
+            .HasKey(ballot => ballot.Id);//Sets the ballot ID as the primary key for the AnonBallots table
 
         modelBuilder.Entity<AnonBallot>()
             .Property(ballot => ballot.VoteChoice)

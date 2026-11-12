@@ -39,7 +39,7 @@ public class AuthController : ControllerBase
     //[FromRoute]	Values inside the URL path	Retrieving a user by ID
     private readonly BcryptService _bcryptService;
     private readonly AppDbContext _dbContext;
-    private readonly ILogger<AuthController> _logger; //Author Aaron Byrne-Logger for storing authentication events such as registering, log-in etc.
+    private readonly ILogger<AuthController> _logger; //Author Aaron Byrne-Logger for recording authentication events such as registering, log-in etc.
     //for 2FA
     private readonly TotpService _totpService;
     private readonly PendingRegistrationService _pendingRegistrationService;

@@ -16,12 +16,12 @@ builder.Services.AddSerilog((services, configuration) =>
 {
     configuration
         .MinimumLevel.Information()//Author Aaron Byrne-Ensures debug messages do not get saved to logs, but errors, info and warnings do
-        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)//Author Aaron Byrne-Only records errors and warnings from Micorsoft framework code
-        .MinimumLevel.Override("System", LogEventLevel.Warning)//Author Aaron Byrne-Ensures that logging from background .NET components is reduced
+        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)//Author Aaron Byrne-Ensures that Microsoft logging is reduced to only critical information such as warnings and errors
+        .MinimumLevel.Override("System", LogEventLevel.Warning)//Author Aaron Byrne-Same as above but for System
         .WriteTo.Console()
-        .WriteTo.File(//Author Aaron Byrne-Saves logs to a file as JSON 
+        .WriteTo.File(//Author Aaron Byrne-Saves logs to a file as JSON
         new RenderedCompactJsonFormatter(),//Author Aaron Byrne-Rendered allows for UserID and EventType to actually show up within the logs
-        "appLogs/logs.json",//Author Aaron Byrne-Saves logs within a JSON folder
+        "appLogs/logs.json",//Author Aaron Byrne-Saves the created logs to a dedicated logs folder
         rollingInterval: RollingInterval.Day);//Author Aaron Byrne-This will create a new log file each day
 });
 
