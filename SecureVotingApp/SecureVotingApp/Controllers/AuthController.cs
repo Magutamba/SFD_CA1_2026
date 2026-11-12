@@ -131,7 +131,7 @@ public class AuthController : ControllerBase
             registrationId,
             setupUri
         });
-
+        
     }
 
     [HttpPost("confirm-registration")]
@@ -195,6 +195,15 @@ public class AuthController : ControllerBase
         {
            return Conflict("Registration could not complete");
         }
+
+        var userId = _dbContext.Users.FirstOrDefault(u => u.Email == pendingUser.Email)?.Id;
+
+        //Author Aaron Byrne-Logging a new user registration
+        _logger.LogInformation(
+            "User ID: {UserID} has had their {EventType}",
+            userId,
+            "Registration successful"
+        );
 
         // Remove the temporary registration after the account is saved.
         _pendingRegistrationService.RemovePendingRegistration(
