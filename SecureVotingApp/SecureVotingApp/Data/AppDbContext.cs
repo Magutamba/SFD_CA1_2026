@@ -10,10 +10,13 @@ namespace SecureVotingApp.Data;
 public class AppDbContext : DbContext
 {
 
-   public DbSet<User> Users { get; set; } = null!; //represents the Users table in the database
-
-   //Passes the database configuration options to the DbContext base class
-   public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    public DbSet<User> Users { get; set; } = null!; //represents the Users table in the database
+    //@author Moïse records that a user has already received a credential for the election 
+    public DbSet<IssuedCredential> IssuedCredentials => Set<IssuedCredential>();
+    //@author Moïse records that an anonymous credential has been used once
+    public DbSet<SpentCredential> SpentCredentials => Set<SpentCredential>();
+    //Passes the database configuration options to the DbContext base class
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
 
     }
