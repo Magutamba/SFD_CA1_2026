@@ -11,7 +11,7 @@ using Serilog.Events;//Aaron Byrne-Allows for logging levels to be set, testing 
 //registering Dependency Injection
 var builder = WebApplication.CreateBuilder(args);
 
-//Author Aaron Byrne- Registering Serilog to be our logger and sending log messages to the terminal in IDE https://github.com/serilog/serilog-aspnetcore#serilogaspnetcore--- 
+//Author Aaron Byrne- Registering Serilog to be our logger and sending log messages to the terminal and JSON files https://github.com/serilog/serilog-aspnetcore#serilogaspnetcore--- 
 builder.Services.AddSerilog((services, configuration) =>
 {
     configuration

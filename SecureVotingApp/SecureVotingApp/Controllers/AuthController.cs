@@ -134,13 +134,6 @@ public class AuthController : ControllerBase
         string registrationId =
             _pendingRegistrationService.CreatePendingRegistration(pendingRegistration);
         
-        //Author Aaron Byrne-Logging a new user registration
-        _logger.LogInformation(
-            "{UserID} has had their {EventType}",
-            registrationId,
-            "Registration successful"
-        );
-        
         // Return the information needed to display the authenticator QR code.
         return Ok(new
         {
@@ -227,7 +220,13 @@ public class AuthController : ControllerBase
         try
         {
             await _dbContext.SaveChangesAsync();//insert into database
-
+            
+            //Author Aaron Byrne-Logging a new user registration
+            _logger.LogInformation(
+                "{UserID} has had their {EventType}",
+                newUser.Id,
+                "Registration successful"
+            );
         }
         catch (DbUpdateException)
         {
