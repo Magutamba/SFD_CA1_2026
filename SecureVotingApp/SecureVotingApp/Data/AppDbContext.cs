@@ -9,19 +9,18 @@ namespace SecureVotingApp.Data;
 
 public class AppDbContext : DbContext
 {
-    public DbSet<User> Users { get; set; } = null!; //DbSet is a generic class provided by EFC(entity framework core) a set of (Users)
-                                                    //@author Moïse records that a user has already received a credential for the election 
-    public DbSet<IssuedCredential> IssuedCredentials => Set<IssuedCredential>();
-    //@author Moïse records that an anonymous credential has been used once
-    public DbSet<SpentCredential> SpentCredentials => Set<SpentCredential>();
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)//base passes the argument to the parent
+
+   public DbSet<User> Users { get; set; } = null!; //represents the Users table in the database
+
+   //Passes the database configuration options to the DbContext base class
+   public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
 
     }
     //@author Aaron Byrne
     public DbSet<AnonBallot> AnonBallots => Set<AnonBallot>();
 
-    //enforcement that emails must be unique 
+    //creates a unique index to prevent duplicate emails addresses in SQLite
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -64,5 +63,3 @@ public class AppDbContext : DbContext
     }
 
 }
-
-//this class incorperates class from EFC to basically access and edit the data base

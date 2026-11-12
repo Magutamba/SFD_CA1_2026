@@ -48,6 +48,12 @@ builder.Services                //exactly the same as .AddAuthentication("Cookie
         options.SlidingExpiration = false;//disable automatic renewal
     });
 
+// Temporarily store pending registrations until TOTP setup is confirmed.(Jeán Walton)
+builder.Services.AddMemoryCache();
+
+// Manage temporary registrations until TOTP enrollment is verified.(Jeán Walton)
+builder.Services.AddSingleton<PendingRegistrationService>();
+
 // Add rate limiting service to build (Lorenzo)
 // Contains strict and standard rules to be associated with API controllers to limit rate at which requests can be sent by client
 // Strict rules are explicitly for anonymous requests - where no user has been authorized (e.g., Login)
