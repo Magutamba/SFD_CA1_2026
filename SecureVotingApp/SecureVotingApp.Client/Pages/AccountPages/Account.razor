@@ -8,9 +8,13 @@
 @inject HttpClient Http
 @inject NavigationManager Navigation
 <h3>Account</h3>
+@* 
+    This page displays the information based on if the user is authenticated on the server or not
+    Access to the vote page is governed by authentication and authorization policies that return Not Found if unauthenticated user attempts to access the page
+    If the user is not authenticated by the system, the user is prompted to register or login to access their account and cast their ballot
+*@
 <AuthorizeView>
     <Authorized>
-        
         <p>Logged into system. Please click the following button to cast your ballot.</p>
 
         <a class="btn btn-primary" href="vote">Cast Your Ballot</a>
@@ -43,20 +47,9 @@
         {
             _message = "Too many requests. Please try again later";
         }
-    }
-
-    private async void Register()
-    {
-        Navigation.NavigateTo("/register", forceLoad: true);
-    }
-
-    private async void Login()
-    {
-        Navigation.NavigateTo("/login", forceLoad: true);
-    }
-
-    private async void Vote()
-    {
-        Navigation.NavigateTo("/vote", forceLoad: true);
+        else
+        {
+            _message = "Error logging out. Please try again later";
+        }
     }
 }
