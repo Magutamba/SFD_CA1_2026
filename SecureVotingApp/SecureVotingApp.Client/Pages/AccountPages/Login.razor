@@ -19,8 +19,8 @@
     <label>Password</label><br/>
     <InputText type="password" @bind-Value="_request.Password"/><br/>
     <label>2FA Code</label><br/>
-    <InputText @bind-Value="_request.Code" minlength="6" maxlength="6"/><br/>
-    <button type="submit" disabled="@_isSubmitting">Login</button>
+    <InputText @bind-Value="_request.Code" minlength="6" maxlength="6"/><br/><br/>
+    <button class="btn btn-primary" type="submit" disabled="@_isSubmitting">Login</button>
     
     <DataAnnotationsValidator/>
     <ValidationSummary/>

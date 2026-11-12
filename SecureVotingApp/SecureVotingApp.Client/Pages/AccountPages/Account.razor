@@ -11,24 +11,19 @@
 <AuthorizeView>
     <Authorized>
         
-        <p>Logged into system. Please click the following link to cast your ballot.</p>
+        <p>Logged into system. Please click the following button to cast your ballot.</p>
 
-        <NavLink class="nav-link" href="vote" style ="color:blue">
-            <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Vote Link
-        </NavLink>
+        <a class="btn btn-primary" href="vote">Cast Your Ballot</a>
         <br/>
         <button type="submit" @onclick="@Logout">Logout</button>
         <p role="status">@_message</p>
     </Authorized>
     <NotAuthorized>
-        <p>Login or Register</p>
-        <NavLink class="nav-link" href="login" style="color:blue">
-            <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> <u>Login Link</u>
-        </NavLink>
+        <p>Welcome to the Account Page</p>
+        <p>Please register or login to access your account and cast your ballot.</p>
+        <a class="btn btn-primary" href="register">Register New Account</a>
         
-        <NavLink class="nav-link" href="register" style="color:blue">
-            <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> <u>Register Link</u>
-        </NavLink>
+        <a class="btn btn-primary" href="login">Login Existing Account</a>
     </NotAuthorized>
 </AuthorizeView>
     
@@ -48,5 +43,20 @@
         {
             _message = "Too many requests. Please try again later";
         }
+    }
+
+    private async void Register()
+    {
+        Navigation.NavigateTo("/register", forceLoad: true);
+    }
+
+    private async void Login()
+    {
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+
+    private async void Vote()
+    {
+        Navigation.NavigateTo("/vote", forceLoad: true);
     }
 }
