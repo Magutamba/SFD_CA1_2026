@@ -1,10 +1,10 @@
-// File: BcrytService.cs
+// File: BcryptService.cs
 // @uthor: Jeán Walton
 // Date: 28/10/2026
 
 namespace SecureVotingApp.Services;
 
-//On initial sign up, Hashing credentials from front end using Bcrypt (even though the backend is receiving a Argon2)
+//Hashes the Argon2id derived credential using bcrypt before storing it in the database
 public class BcryptService
 {
     public string HashCredential(string argon2Hash)

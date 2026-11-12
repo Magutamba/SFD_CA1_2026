@@ -10,9 +10,9 @@ namespace SecureVotingApp.Services;
 
 public class PendingRegistrationService
 {
-    private readonly IMemoryCache _cache; //is thread safe
+    private readonly IMemoryCache _cache; //IMemoryCache supports concurrent access
 
-    private readonly object _registrationLock = new();//is an object used to only execute one request at a time
+    private readonly object _registrationLock = new();//lock: prevents two or more requests from modifyying the same shared data at the same time.
 
     public PendingRegistrationService(IMemoryCache cache)
     {
@@ -36,26 +36,12 @@ public class PendingRegistrationService
 
         return registrationId;
     }
-    /*  RandomNumberGenerator.GetBytes(32) generates 32 unpredictable bytes.
-        Convert.ToBase64String() converts them into a string the frontend can send back.
-        _cache.Set() stores your PendingRegistration object under that reference.
-        TimeSpan.FromMinutes(10) automatically expires the entry after 10 minutes.
-        The method returns the reference, not the registration details or TOTP secret.
-    */
-
+   
     // Retrieve a pending registration using its temporary reference.
     public PendingRegistration? GetPendingRegistration(string registrationId)
     {
         return _cache.Get<PendingRegistration>(registrationId);
     }
-
-    /*  How it works
-        registrationId is the random reference generated earlier.
-        _cache.Get<PendingRegistration>() looks for that reference in memory.
-        If it exists, the method returns the pending registration details.
-        If it has expired or doesn't exist, the method returns null.
-        The ? means the method can return either a PendingRegistration object or null.
-    */
 
     // Remove temporary registration details after successful 2FA verification.
     public void RemovePendingRegistration(string registrationId)
@@ -65,7 +51,8 @@ public class PendingRegistrationService
 
     // Record an invalid TOTP attempt and cancel registration after 5 failures.
     public bool RecordFailedAttempt(string registrationId)
-    {   //lock: prevents two or more requests from modifyying the same shared data at the same time.
+    {   
+        //lock: prevents two or more requests from modifyying the same shared data at the same time.
         lock (_registrationLock) 
         {
              var pending = GetPendingRegistration(registrationId);

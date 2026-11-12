@@ -3,39 +3,27 @@
 // 29/10/2026
 
 using System.ComponentModel.DataAnnotations;
-using System.Reflection.Metadata.Ecma335;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using SecureVotingApp.Data;
 using SecureVotingApp.DTOs;
 using SecureVotingApp.Models;
 using SecureVotingApp.Services;
-using SQLitePCL;//controller base
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using OtpNet;
-using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.AspNetCore.RateLimiting;
 
-/*
-    Claim — Represents one piece of information about a user.
-    ClaimsIdentity — Groups claims into an identity.
-    ClaimsPrincipal — Represents the user associated with that identity.
-*/
+
 namespace SecureVotingApp.Controllers;
 
-[ApiController]//this controller handles API requests
+[ApiController]
 [Route("api/auth")]// URL prefix to access the controller
 public class AuthController : ControllerBase
 {   
-    //[FromBody]	HTTP request body, usually JSON	API registration and login
-    //[FromForm]	HTTP form fields in the request body	Traditional HTML forms and file uploads enconded form data
-    //[FromQuery]	URL query parameters	Searching and filtering
-    //[FromRoute]	Values inside the URL path	Retrieving a user by ID
+    
     private readonly BcryptService _bcryptService;
     private readonly AppDbContext _dbContext;
     //for 2FA
@@ -61,22 +49,22 @@ public class AuthController : ControllerBase
         var isEmailNotNull = !string.IsNullOrWhiteSpace(request.Email);
         if(!isEmailNotNull) return BadRequest("Email cannot be Null of Empty");
 
-        //normalise and set email it lower removing whitespaces
+        // trim whitespaces and normalise the email address
         string normalisedEmail = request.Email.Trim().ToLowerInvariant(); 
 
         //validate email
         bool isValidEmail = emailChecker.IsValid(normalisedEmail);
         if(!isValidEmail) return BadRequest("Valid email required");
 
-        //check that the password is not null
+        //check that the derived credential was provided
         bool isValidArgon2Hash = !string.IsNullOrWhiteSpace(request.Argon2Hash);
         if(!isValidArgon2Hash) return BadRequest("ArgonHashed Password cannot be null");
 
-        //check salt is not null
+        //check salt was provided
         bool isValidSalt = !string.IsNullOrWhiteSpace(request.Argon2Salt);
         if(!isValidSalt) return BadRequest("Salt is required");
         
-        
+        // validate the at the Argon2id derived crdential is a valid Base64 and exactly 32 bytes.
         try
         {
             byte[] argonBytes = Convert.FromBase64String(request.Argon2Hash);
@@ -88,6 +76,7 @@ public class AuthController : ControllerBase
             return BadRequest("Invalid Argon2 Encoding");
         }
 
+        // validate that the Argon2id salt is valid Base64 and exactly 16 bytes
         try{
             byte[] saltBytes = Convert.FromBase64String(request.Argon2Salt);
             bool validSaltLength = saltBytes.Length == 16;
@@ -106,10 +95,10 @@ public class AuthController : ControllerBase
             return  Conflict(new { message = "Email already exists"});
         }
 
-        //call the Bcrypt on the Argon2
+        // hash the Argon2id derived credential using bcrypt 
         string argon2HashedByBycrpt = _bcryptService.HashCredential(request.Argon2Hash);
 
-        // Generate the secret shared with the user's authenticator app.
+        // Generate the TOTP secret shared with the user's authenticator app.
         string totpSecret = _totpService.GenerateSecret();
         
         // Generate the setup URI that the frontend will display as a QR code.
@@ -138,28 +127,6 @@ public class AuthController : ControllerBase
             setupUri
         });
 
-        /*
-        //creating a user object
-        var newUser = new User{
-            Email = normalisedEmail,
-            CredentialHash = argon2HashedByBycrpt,
-            Argon2Salt = request.Argon2Salt
-        };
-
-        
-        _dbContext.Users.Add(newUser); //EF Core to trake newUser as a new record
-        //insert into database
-        try
-        {
-            await _dbContext.SaveChangesAsync();//insert into database
-
-        }
-        catch (DbUpdateException)
-        {
-           return Conflict("Registration could not complete");
-        }
-         */   
-       //return Ok();
     }
 
     [HttpPost("confirm-registration")]
@@ -213,10 +180,10 @@ public class AuthController : ControllerBase
         };
 
          _dbContext.Users.Add(newUser); //EF Core to trake newUser as a new record
-        //insert into database
+        //insert into database (saving new record to data base)
         try
         {
-            await _dbContext.SaveChangesAsync();//insert into database
+            await _dbContext.SaveChangesAsync();
 
         }
         catch (DbUpdateException)
@@ -237,26 +204,26 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> UserLogin([FromBody] UserLoginDto request)
     {
         
-        //validate is a email before assigning
+        //validate email is not empty or null, before assigning
         var isEmailNotNull = !string.IsNullOrWhiteSpace(request.Email);
         if(!isEmailNotNull) return BadRequest("Email cannot be Null of Empty");
 
-        //normalise and set email it lower removing whitespaces
+        // trim whitespaces and normalise the email address
         string normalisedEmailLogin = request.Email.Trim().ToLowerInvariant(); 
 
-        //validate email
+        //validate email format
         bool isValidEmail = emailChecker.IsValid(normalisedEmailLogin);
         if(!isValidEmail) return BadRequest("Valid email required");
 
-        //check db if user exist using email if so return the user object 
+        //check db if user exist, using email to verify, if true return the user object 
         User? user = await _dbContext.Users.FirstOrDefaultAsync(user => user.Email == normalisedEmailLogin);
         if(user is null) return Unauthorized("Invalid credentials");
         
-        //check that the password is not null
+        //check that the password is not null or empty
         bool isValidArgon2Hash = !string.IsNullOrWhiteSpace(request.Argon2Hash);
         if(!isValidArgon2Hash) return BadRequest("ArgonHashed Password cannot be null");
 
-        //check a valid Argon2Hash
+        //check if valid Argon2Hash format is a valid base 64 and 32 bytes in length
          try
         {
             byte[] argonBytes = Convert.FromBase64String(request.Argon2Hash);
@@ -280,7 +247,6 @@ public class AuthController : ControllerBase
             return Unauthorized("Invalid credentials");
         }
         
-        if(!isValidPassword) return Unauthorized("Invalid credentials");
 
         // Require a configured TOTP secret for every account.
         if (string.IsNullOrWhiteSpace(user.TotpSecret))
@@ -317,7 +283,10 @@ public class AuthController : ControllerBase
         // Save the change to SQLite.
         await _dbContext.SaveChangesAsync();
 
-        //collection of claims
+        /*collection of claims
+         Created to identify the logged in user by ther ID and email
+         these claims are stored in the authentication cookie and used to identifiy the user in future request.
+        */
         var claimId = new Claim(ClaimTypes.NameIdentifier, user.Id.ToString());
         var claimEmail = new Claim(ClaimTypes.Email, user.Email);
         var claimColletion = new[] {claimId, claimEmail};
@@ -337,25 +306,24 @@ public class AuthController : ControllerBase
     }
 
     //for obscurity reason named it details...for users.salt and the post so it does not show in the URI
-    
     [HttpPost("details")]
     [EnableRateLimiting("StrictPolicy")]
     public async Task<IActionResult> UserSalt([FromBody] SaltRequestDto request)
     {
-         //validate is a email before assigning
-        var isEmailNotNull = !string.IsNullOrWhiteSpace(request.Email);
+         //verify email is not empty or null before assigning
+        bool isEmailNotNull = !string.IsNullOrWhiteSpace(request.Email);
         if(!isEmailNotNull) return BadRequest("Email cannot be Null of Empty");
 
-        //normalise and set email it lower removing whitespaces
+        //trim and format the email to lowercase 
         string normalisedEmailLogin = request.Email.Trim().ToLowerInvariant(); 
 
-        //validate email
+        //validate email format
         bool isValidEmail = emailChecker.IsValid(normalisedEmailLogin);
         if(!isValidEmail) return BadRequest("Valid email required");
 
         //check db if user exist using email if so return the user object 
         User? user = await _dbContext.Users.FirstOrDefaultAsync(user => user.Email == normalisedEmailLogin);
-        //with out informing a user that the email is incorrect a dummy salt will be generated and sent
+        //without informing a user that the email is incorrect, a dummy salt will be generated and sent
         if(user is null) {
             //generate a random number
             byte[] randomBytes = RandomNumberGenerator.GetBytes(16);
@@ -372,7 +340,7 @@ public class AuthController : ControllerBase
     
     public async Task<IActionResult> Logout()
     {   
-        //cancelling the cookie
+        //signing out and clear the authentication cookie
         await HttpContext.SignOutAsync(
             CookieAuthenticationDefaults.AuthenticationScheme
         );

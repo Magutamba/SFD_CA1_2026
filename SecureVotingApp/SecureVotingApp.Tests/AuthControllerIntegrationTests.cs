@@ -2,15 +2,12 @@
 // @uthor: Jeán Walton
 // 30/10/2026
 
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Http.Json;
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Newtonsoft.Json.Bson;
 using OtpNet;
-using Xunit;
+
 
 public class AuthControllerIntegrationTests : IDisposable
 {
