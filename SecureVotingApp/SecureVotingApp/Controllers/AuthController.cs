@@ -39,7 +39,7 @@ public class AuthController : ControllerBase
     //[FromRoute]	Values inside the URL path	Retrieving a user by ID
     private readonly BcryptService _bcryptService;
     private readonly AppDbContext _dbContext;
-    private readonly ILogger<AuthController> _logger; //Author Aaron Byrne-Logger for storing authentication events such as registering, log-in etc.
+    private readonly ILogger<AuthController> _logger; //Author Aaron Byrne-Logger for recording authentication events such as registering, log-in etc.
     //for 2FA
     private readonly TotpService _totpService;
     private readonly PendingRegistrationService _pendingRegistrationService;
@@ -134,13 +134,6 @@ public class AuthController : ControllerBase
         string registrationId =
             _pendingRegistrationService.CreatePendingRegistration(pendingRegistration);
         
-        //Author Aaron Byrne-Logging a new user registration
-        _logger.LogInformation(
-            "{UserID} has had their {EventType}",
-            registrationId,
-            "Registration successful"
-        );
-        
         // Return the information needed to display the authenticator QR code.
         return Ok(new
         {
@@ -227,7 +220,13 @@ public class AuthController : ControllerBase
         try
         {
             await _dbContext.SaveChangesAsync();//insert into database
-
+            
+            //Author Aaron Byrne-Logging a new user registration
+            _logger.LogInformation(
+                "{UserID} has had their {EventType}",
+                newUser.Id,
+                "Registration successful"
+            );
         }
         catch (DbUpdateException)
         {

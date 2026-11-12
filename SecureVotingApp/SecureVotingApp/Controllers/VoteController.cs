@@ -96,7 +96,7 @@ public class VoteController : ControllerBase
         }
         
         //Author Aaron Byrne- Only allow a user to vote Yes or No as a vote
-        string voteChoice = request.VoteChoice.Trim();
+        string voteChoice = request.VoteChoice.Trim();//Trim removes any whitespace from the users input
 
         if (!voteChoice.Equals("Yes", StringComparison.OrdinalIgnoreCase) &&
             !voteChoice.Equals("No", StringComparison.OrdinalIgnoreCase))
