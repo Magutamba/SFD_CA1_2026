@@ -19,7 +19,10 @@ using Org.BouncyCastle.Math;
 //engine for RSA encryption and decryption
 using Org.BouncyCastle.Crypto.Engines;
 using SecureVotingApp.Client.Contracts;
+// json serializationa and deserialization
 using System.Text.Json;
+//provides core cryptographic classes including InvalidCipherTextException
+using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Modes;
 //logical namespace for grouping services components together
 namespace SecureVotingApp.Client.Services;
@@ -29,9 +32,9 @@ namespace SecureVotingApp.Client.Services;
 public class RecoveryMaterial
 {
     //recovery key
-    public string RecoveryKey {get;set;} = string.Empty;
+    public string RecoveryKey { get; set; } = string.Empty;
     //recovery package
-    public string RecoveryPackage {get;set;} = string.Empty;
+    public string RecoveryPackage { get; set; } = string.Empty;
 }
 public class BlindCredentialClient : IBlindCredentialClient
 {
@@ -70,17 +73,17 @@ public class BlindCredentialClient : IBlindCredentialClient
         //decode the base64url encoded RSA modulus and exponent into raw byte array
         byte[] modulusBytes = Base64UrlDecode(pubKeyDTO.Modulus);
         byte[] exponentBytes = Base64UrlDecode(pubKeyDTO.Exponent);
-        
+
 
         BigInteger modulus = new BigInteger(1, modulusBytes);
         BigInteger exponent = new BigInteger(1, exponentBytes);
         //validate RSA modulus length
-        if(modulus.BitLength <MinRsaBitLength || !modulus.TestBit(0))
+        if (modulus.BitLength < MinRsaBitLength || !modulus.TestBit(0))
         {
             throw new CryptographicException("RSA modulus must be odd and at least 2048 bits.");
         }
         //validate public exponent
-        if(exponent.CompareTo(BigInteger.ValueOf(3)) <0 || !exponent.TestBit(0))
+        if (exponent.CompareTo(BigInteger.ValueOf(3)) < 0 || !exponent.TestBit(0))
         {
             throw new CryptographicException("Invalid RSA public exponent.");
         }
@@ -127,7 +130,7 @@ public class BlindCredentialClient : IBlindCredentialClient
 
         //declare a variable to hold the inverse blinding factor r, while ensuring it is coprime to the RSA modulus N
         BigInteger r;
-        do 
+        do
         {
             // generate a random blinding factor r in the range [1, N-1] where N is the RSA modulus
             byte[] rBytes = RandomNumberGenerator.GetBytes(k);
@@ -173,8 +176,8 @@ public class BlindCredentialClient : IBlindCredentialClient
     {
         await PublicKeyLoadedAsync();
         //reject missing state
-        if(state == null || string.IsNullOrWhiteSpace(state.BlindingValue)
-                  || string.IsNullOrWhiteSpace(state.MessageRandomizer)||
+        if (state == null || string.IsNullOrWhiteSpace(state.BlindingValue)
+                  || string.IsNullOrWhiteSpace(state.MessageRandomizer) ||
                      string.IsNullOrWhiteSpace(state.ElectionId))
         {
             throw new InvalidOperationException("Invalid blind state");
@@ -193,7 +196,7 @@ public class BlindCredentialClient : IBlindCredentialClient
         //decode the base64 url encoded blinding value to a byte array
         byte[] rBytes = Base64UrlDecode(state.BlindingValue);
         //validate the blinding value
-        if(rBytes.Length > k)
+        if (rBytes.Length > k)
         {
             throw new CryptographicException("Invalid blinding factor length");
         }
@@ -201,7 +204,7 @@ public class BlindCredentialClient : IBlindCredentialClient
         // convert the blinding value bytes into a positive BigInteger r for RSA arithmetic
         BigInteger r = new BigInteger(1, rBytes);
         //check if that the blinding value is valid and coprime to the RSA modulus N
-        if(r.CompareTo(BigInteger.One)<0 || r.CompareTo(modulus)>=0 || !r.Gcd(modulus).Equals(BigInteger.One))
+        if (r.CompareTo(BigInteger.One) < 0 || r.CompareTo(modulus) >= 0 || !r.Gcd(modulus).Equals(BigInteger.One))
         {
             throw new CryptographicException("Invalid blinding value");
         }
@@ -209,7 +212,7 @@ public class BlindCredentialClient : IBlindCredentialClient
         // convert the signed blinded credential bytes into a positive BigInteger s' for RSA arithmetic
         BigInteger sPrime = new BigInteger(1, signedBytes);
         //reject a signed representative is outside the RSA range
-        if(sPrime.CompareTo(BigInteger.Zero)<=0 || sPrime.CompareTo(modulus) >= 0)
+        if (sPrime.CompareTo(BigInteger.Zero) <= 0 || sPrime.CompareTo(modulus) >= 0)
         {
             throw new CryptographicException("Invalid signed blinded credential");
         }
@@ -221,7 +224,7 @@ public class BlindCredentialClient : IBlindCredentialClient
         //convert the unblinded integer back to a fixed length byte array
         byte[] unBlindedBytes = unBlindedNum.ToByteArrayUnsigned();
         //ensure the result cannot exceed the RSA modulus length
-        if(unBlindedBytes.Length > k)
+        if (unBlindedBytes.Length > k)
         {
             throw new CryptographicException("Invalid unblinded credential length");
         }
@@ -231,33 +234,33 @@ public class BlindCredentialClient : IBlindCredentialClient
         Buffer.BlockCopy(unBlindedBytes, 0, fixedLenUnBlinded, k - unBlindedBytes.Length, unBlindedBytes.Length);
         //included electionId and expiry time in the blind message to prevent replay attacks and ensure credential validity
         string message = state.ElectionId;
-         //retrive the original electionId as UTF8 bytes 
+        //retrive the original electionId as UTF8 bytes 
         byte[] messageBytes = System.Text.Encoding.UTF8.GetBytes(message);
 
         //ensure message prefix is 32 bytes exaclty
         byte[] randomizer = Base64UrlDecode(state.MessageRandomizer);
-        if(randomizer.Length !=RandomizerLength)
-        {   
+        if (randomizer.Length != RandomizerLength)
+        {
             throw new CryptographicException("Invalid message randomizer");
         }
         //reconstruct original prepared message
         byte[] preparedMessage = new byte[RandomizerLength + messageBytes.Length];
 
         //copy randomized prefix into prepared message
-        Buffer.BlockCopy(randomizer,0, preparedMessage,0, randomizer.Length );
+        Buffer.BlockCopy(randomizer, 0, preparedMessage, 0, randomizer.Length);
 
         //append the electionId to the prepared message
-        Buffer.BlockCopy(messageBytes,0, preparedMessage, RandomizerLength, messageBytes.Length);
+        Buffer.BlockCopy(messageBytes, 0, preparedMessage, RandomizerLength, messageBytes.Length);
         //retrieve the public key for signature verification
         var pubKey = new RsaKeyParameters(false, modulus, cachedExponent);
         //create a PSS signer with RSA engine and SHA384 digest to verify the unblinded credential signature
-        var verifier = new PssSigner(new RsaEngine(), new Sha384Digest(), new Sha384Digest(),  PSS_SaltLength);
+        var verifier = new PssSigner(new RsaEngine(), new Sha384Digest(), new Sha384Digest(), PSS_SaltLength);
 
         //intialize signature verification with the public key
-        verifier.Init(false,pubKey);
+        verifier.Init(false, pubKey);
 
         //supply the original prepared message
-        verifier.BlockUpdate(preparedMessage,0, preparedMessage.Length);
+        verifier.BlockUpdate(preparedMessage, 0, preparedMessage.Length);
         //verifies the unblinded credential before returning it to the client
         if (!verifier.VerifySignature(fixedLenUnBlinded))
         {
@@ -268,71 +271,193 @@ public class BlindCredentialClient : IBlindCredentialClient
     }
 
     //method to generate random recovery key and encrypt blind state
-    public RecoveryMaterial CreateRecoveryMaterial(BlindState state)
+    public RecoveryMaterial CreateRecoveryMaterial(BlindState state, string electionId)
     {
-        if(state == null)
+        if (state == null)
         {
             throw new InvalidOperationException("Invalid blind state");
         }
+        if (string.IsNullOrWhiteSpace(electionId) || state.ElectionId != electionId)
+        {
+            throw new InvalidOperationException("Invalid recovery for this election");
+        }
         //generate a random 32 byte recovery key for encrypting the blind state
         byte[] recoveryKey = RandomNumberGenerator.GetBytes(32);
-        //encrypt the blind state using AES-GCM with the recovery key
+        //convert the blind state into UTF8 bytes
         byte[] plainText = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(state);
-
+        //convert the electionId into UTF8 bytes as additional authenticated data
+        byte[] associatedData = System.Text.Encoding.UTF8.GetBytes(electionId);
         //generate a random 12 byte nonce for AES-GCM encryption
-        byte [] nonce = RandomNumberGenerator.GetBytes(12);
+        byte[] nonce = RandomNumberGenerator.GetBytes(12);
 
-        // use AES-GCM to encrypt the blind state with the recovery key and nonce, producing ciphertext and authentication tag
-        var cipher = new GcmBlockCipher(new AesEngine());
-
-        cipher.Init(true, new AeadParameters(new KeyParameter(recoveryKey), 128, nonce));
-        byte[] output = new byte[cipher.GetOutputSize(plainText.Length)];
-        int len = cipher.ProcessBytes(plainText, 0, plainText.Length, output,0);
-        cipher.DoFinal(output, len);
-        // combine the nonce, ciphertext, and tag into a single package
-        byte[] package = new byte[nonce.Length + output.Length];
-
-        // copy the nonce, ciphertext, and tag into the package in order
-        Buffer.BlockCopy(nonce,0, package, 0, nonce.Length);
-        //
-        Buffer.BlockCopy(output, 0, package, nonce.Length, output.Length);
-
-        // return the recovery key and encrypted package as base64 url encoded strings to the client
-        return new RecoveryMaterial
+        //? allows nullable
+        byte[]? package = null;
+        byte[]? output = null;
+        try
         {
-            RecoveryKey = Base64UrlEncode(recoveryKey),
-            RecoveryPackage = Base64UrlEncode(package)
-        };     
+            // use AES-256-GCM to encrypt the blind state with the recovery key and nonce, producing ciphertext and authentication tag
+            var cipher = new GcmBlockCipher(new AesEngine());
+            //intialize the cipher for encryption with the recovery key and nonce, specifying the authentication tag length of 128 bits
+            //associatedData included when initializing cipher to ensure the recovery package is bound to the specific electionId
+            cipher.Init(true, new AeadParameters(new KeyParameter(recoveryKey), 128, nonce, associatedData));
+            //byte array to hold the cipher text and authentication tag
+            output = new byte[cipher.GetOutputSize(plainText.Length)];
+            //encrypt the blind state and write the result to the output buffer, return number of bytes written
+            int bytesWritten = cipher.ProcessBytes(plainText, 0, plainText.Length, output, 0);
+            // finalize the encryption append the authentication tag for verification
+            cipher.DoFinal(output, bytesWritten);
+            // combine the nonce, ciphertext, and tag into a single package
+            package = new byte[nonce.Length + output.Length];
+
+            // copy the nonce, ciphertext, and tag into the package in order
+            Buffer.BlockCopy(nonce, 0, package, 0, nonce.Length);
+            // copy the cipher text and authentication tag into the package after the nonce
+            Buffer.BlockCopy(output, 0, package, nonce.Length, output.Length);
+
+            // return the recovery key and encrypted package as base64 url encoded strings to the client
+            return new RecoveryMaterial
+            {
+                RecoveryKey = Base64UrlEncode(recoveryKey),
+                RecoveryPackage = Base64UrlEncode(package)
+            };
+
+        }
+        //handle any cryptographic encryption failures
+        catch (CryptographicException)
+        {
+            throw new InvalidOperationException("Unable to create recovery material");
+        }
+        finally
+        {
+            //cleanup regardless of success or failure 
+            if (output != null)
+            {
+                CryptographicOperations.ZeroMemory(output);
+            }
+            if (package != null)
+            {
+                CryptographicOperations.ZeroMemory(package);
+            }
+            CryptographicOperations.ZeroMemory(recoveryKey);
+            CryptographicOperations.ZeroMemory(plainText);
+
+        }
+
 
     }
     // method to decrypt the encrypted package
-    public BlindState RestoreRecoveryPackage( string recoveryPackage, string recoveryKey)
+    public BlindState RestoreRecoveryPackage(string recoveryPackage, string recoveryKey, string electionId)
     {
-        // decode the base64 url encoded recovery key and package into raw byte arrays
-        byte[] key = Base64UrlDecode(recoveryKey);
-        // decode the base64 url encoded recovery package into raw byte array
-        byte[] package = Base64UrlDecode(recoveryPackage);
-
-        // validate the recovery key length
-        if(key.Length != 32 || package.Length <12+16+1)
+        if (string.IsNullOrEmpty(recoveryPackage) || string.IsNullOrEmpty(recoveryKey))
         {
             throw new InvalidOperationException("Invalid recovery information");
         }
-        // extraction
-        byte[] nonce = package[..12];
-        byte[] cipherTextWithTag = package[12..];
+        if (string.IsNullOrWhiteSpace(electionId))
+        {
+            throw new InvalidOperationException("Invalid electionId for recovery");
+        }
+        //? allows nullable
+        byte[]? key = null;
+        byte[]? plainText = null;
+        byte[]? actualPlainText = null;
+        byte[]? package = null;
+        byte[]? nonce = null;
+        byte[]? cipherTextWithTag = null;
 
-        var cipher = new GcmBlockCipher(new AesEngine());
-        cipher.Init(false, new AeadParameters(new KeyParameter(key), 128, nonce));
 
-        byte[] plainText = new byte[cipher.GetOutputSize(cipherTextWithTag.Length)];
-        int len = cipher.ProcessBytes(cipherTextWithTag, 0, cipherTextWithTag.Length, plainText, 0);
-        cipher.DoFinal(plainText, len);
+        try
+        {
+            // decode the base64 url encoded recovery key and package into raw byte arrays
+            key = Base64UrlDecode(recoveryKey);
+            // decode the base64 url encoded recovery package into raw byte array
+            package = Base64UrlDecode(recoveryPackage);
 
-        return System.Text.Json.JsonSerializer.Deserialize<BlindState>(plainText)
-            ?? throw new InvalidOperationException("Unable to restore blind state from recovery package.");
+            // validate the recovery key length
+            if (key.Length != 32 || package.Length < 12 + 16 + 1)
+            {
+                throw new InvalidOperationException("Invalid recovery information");
+            }
+            // extraction
+            nonce = package[..12];
+            cipherTextWithTag = package[12..];
 
-        
+            //use AES-256-GCM to decrypt the blind state with the recovery key and nonce producing plaintext
+            var cipher = new GcmBlockCipher(new AesEngine());
+            //convert the electionId into UTF8 bytes as additional authenticated data
+            byte[] associatedData = System.Text.Encoding.UTF8.GetBytes(electionId);
+            //initialize the cipher for decryption with the recovery key and nonce, specifying the authentication tag length of 128 bits
+            cipher.Init(false, new AeadParameters(new KeyParameter(key), 128, nonce, associatedData));
+            //a byte array holds the decrypt plaintext
+            plainText = new byte[cipher.GetOutputSize(cipherTextWithTag.Length)];
+            //decrypt the blind state and write the result to the output buffer, return number of bytes written
+            int bytesWritten = cipher.ProcessBytes(cipherTextWithTag, 0, cipherTextWithTag.Length, plainText, 0);
+            //finalize the decryption and append the authentication tag for verification
+            int finalBytes = cipher.DoFinal(plainText, bytesWritten);
+            //calculate actual encrypted data length
+            int totalBytes = bytesWritten + finalBytes;
+            //slice exact decrypted plaintext and remove allocated  buffer padding
+            actualPlainText = plainText[..totalBytes];
+            //ensure plainText is cleared from memory after deserialization to prevent sensitive data leak
+            // decrypt the plaintext back into a BlindState object and return it to the client
+            BlindState restoredState = System.Text.Json.JsonSerializer.Deserialize<BlindState>(actualPlainText)
+                ?? throw new InvalidOperationException("Unable to restore blind state from recovery package.");
+            //validate the restored blind state electionId
+            if (string.IsNullOrWhiteSpace(restoredState.ElectionId) || restoredState.ElectionId != electionId)
+            {
+                throw new InvalidOperationException("Missing ElectionId or mismatch");
+            }
+            return restoredState;
+
+        }
+        //catch any Base 64 input
+        catch (FormatException)
+        {
+            throw new InvalidOperationException("Invalid Recovery information format");
+        }
+        //handle AES-GCM authentication failure
+        catch (InvalidCipherTextException)
+        {
+            throw new InvalidOperationException("Invalid recovery information or tampered package");
+
+        }
+        //handle cryptographic failures during decryption
+        catch (CryptographicException)
+        {
+            throw new InvalidOperationException("Recovery could not be completed");
+
+        }
+        catch (JsonException)
+        {
+            throw new InvalidOperationException("Failed recovery, Restored data is not valid.");
+        }
+        finally
+        {
+            //cleanup regardless of success or failure 
+            if (key != null)
+            {
+                CryptographicOperations.ZeroMemory(key);
+            }
+            if (plainText != null)
+            {
+                CryptographicOperations.ZeroMemory(plainText);
+            }
+            if (package != null)
+            {
+                CryptographicOperations.ZeroMemory(package);
+            }
+            if (nonce != null)
+            {
+                CryptographicOperations.ZeroMemory(nonce);
+            }
+            if (cipherTextWithTag != null)
+            {
+                CryptographicOperations.ZeroMemory(cipherTextWithTag);
+            }
+            if (actualPlainText != null)
+            {
+                CryptographicOperations.ZeroMemory(actualPlainText);
+            }
+        }
     }
 
     //helper method to decode base64 url encoded string into a byte array

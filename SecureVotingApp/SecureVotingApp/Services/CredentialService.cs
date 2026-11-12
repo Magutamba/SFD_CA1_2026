@@ -128,7 +128,7 @@ public class CredentialService
             bool completed = await stateStore.CompleteIssuedCredentialAsync(record.UserId, record.ElectionId, signedValue);
             if (!completed)
             {
-                throw new InvalidOperationException("Credential issuancecould not be completed");
+                throw new InvalidOperationException("Credential issuance could not be completed");
             }
 
             //update the record status locally to reflect the completed issuance
