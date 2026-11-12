@@ -8,27 +8,26 @@
 @inject HttpClient Http
 @inject NavigationManager Navigation
 <h3>Account</h3>
+@* 
+    This page displays the information based on if the user is authenticated on the server or not
+    Access to the vote page is governed by authentication and authorization policies that return Not Found if unauthenticated user attempts to access the page
+    If the user is not authenticated by the system, the user is prompted to register or login to access their account and cast their ballot
+*@
 <AuthorizeView>
     <Authorized>
-        
-        <p>Logged into system. Please click the following link to cast your ballot.</p>
+        <p>Logged into system. Please click the following button to cast your ballot.</p>
 
-        <NavLink class="nav-link" href="vote" style ="color:blue">
-            <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Vote Link
-        </NavLink>
+        <a class="btn btn-primary" href="vote">Cast Your Ballot</a>
         <br/>
         <button type="submit" @onclick="@Logout">Logout</button>
-        <p role="status">@_message</p>
+        <p role="alert">@_message</p>
     </Authorized>
     <NotAuthorized>
-        <p>Login or Register</p>
-        <NavLink class="nav-link" href="login" style="color:blue">
-            <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> <u>Login Link</u>
-        </NavLink>
+        <p>Welcome to the Account Page</p>
+        <p>Please register or login to access your account and cast your ballot.</p>
+        <a class="btn btn-primary" href="register">Register New Account</a>
         
-        <NavLink class="nav-link" href="register" style="color:blue">
-            <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> <u>Register Link</u>
-        </NavLink>
+        <a class="btn btn-primary" href="login">Login Existing Account</a>
     </NotAuthorized>
 </AuthorizeView>
     
@@ -47,6 +46,10 @@
         else if (response.StatusCode == HttpStatusCode.TooManyRequests)
         {
             _message = "Too many requests. Please try again later";
+        }
+        else
+        {
+            _message = "Error logging out. Please try again later";
         }
     }
 }
