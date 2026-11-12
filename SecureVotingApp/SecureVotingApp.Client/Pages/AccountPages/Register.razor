@@ -28,7 +28,7 @@
     <button class="btn btn-primary" type="submit" disabled="@_isSubmitting">Create Account</button>
     @if (_message is not null)
     {
-        <p role="status">@_message</p>
+        <p role="alert">@_message</p>
     }
     <DataAnnotationsValidator/>
     <ValidationSummary/>
