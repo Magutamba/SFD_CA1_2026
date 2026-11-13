@@ -59,6 +59,9 @@ secrets.json
 keys/
 *.pem
 
+# Local Docker HTTPS certificate
+.docker/https/
+
 # Local publish settings (may contain credentials)
 *.pubxml
 *.pubxml.user
@@ -83,3 +86,6 @@ Desktop.ini
 
 # Ignore log files created by Serilog
 appLogs/
+
+# excludes RSA key directories.
+**/[Kk]eys/

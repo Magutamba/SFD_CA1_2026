@@ -1,0 +1,19 @@
+services:
+  secure-voting:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: "http://+:8080;https://+:8443"
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /https/devcert.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: ${DEV_CERT_PASSWORD:?Set DEV_CERT_PASSWORD first}
+      ConnectionStrings__SQLite_Connection: "Data Source=/app/data/voting.db"
+
+    volumes:
+      - ./.docker/https:/https:ro
