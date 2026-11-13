@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+**/voting.db
+**/voting.db-shm
+**/voting.db-wal
+**/Keys/
+**/appLogs/
+SecureVotingApp.Tests/
+.git/
+.vs/
+.vscode/
+.docker/https/
